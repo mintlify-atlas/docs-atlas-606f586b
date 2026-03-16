@@ -1,0 +1,221 @@
+---
+title: "Scroll animations"
+description: "Trigger animations when elements enter the viewport, or link animation values directly to scroll position."
+---
+
+Svelte Motion supports two patterns for scroll-driven animations:
+
+1. **`whileInView`** — trigger a one-shot animation when an element enters the viewport
+2. **`useScroll` + `useTransform`** — link any animated value directly to scroll progress
+
+For time-driven animations (spinning loaders, continuous loops) the `useTime` + `useTransform` combination is also available.
+
+## Viewport-triggered animations with `whileInView`
+
+`whileInView` works like `whileHover` but for the IntersectionObserver: when the element enters the viewport it animates to the `whileInView` state; when it leaves, it animates back to its baseline.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+/>
+```
+
+### Inline transition override
+
+Embed a `transition` key inside `whileInView` to override timing for the enter animation specifically:
+
+```svelte
+<motion.div
+    initial={{ opacity: 0, scale: 0.9 }}
+    whileInView={{ opacity: 1, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } }}
+/>
+```
+
+### Callbacks
+
+Use `onInViewStart` and `onInViewEnd` to run code when the element enters or leaves the viewport:
+
+```svelte
+<motion.section
+    whileInView={{ opacity: 1, y: 0 }}
+    initial={{ opacity: 0, y: 40 }}
+    onInViewStart={() => console.log('entered viewport')}
+    onInViewEnd={() => console.log('left viewport')}
+/>
+```
+
+### How it works
+
+Internally, `whileInView` uses the browser's native `IntersectionObserver` with `threshold: 0` — the animation fires as soon as **any part** of the element is visible. There are no Framer-style `viewport` options (root, margin, amount) yet.
+
+<Warning>
+  The current implementation does not support Framer Motion's `viewport` options (`root`, `margin`, `amount`, `once`). The observer always uses `threshold: 0` against the default viewport.
+</Warning>
+
+## Scroll-linked animations with `useScroll`
+
+`useScroll` returns four Svelte readable stores that update on every scroll event:
+
+| Store | Description |
+|-------|-------------|
+| `scrollX` | Horizontal scroll position in pixels |
+| `scrollY` | Vertical scroll position in pixels |
+| `scrollXProgress` | Horizontal scroll progress as 0–1 |
+| `scrollYProgress` | Vertical scroll progress as 0–1 |
+
+```svelte
+<script lang="ts">
+    import { useScroll } from '@humanspeak/svelte-motion'
+
+    const { scrollYProgress } = useScroll()
+</script>
+
+<!-- Progress bar that fills as you scroll -->
+<div
+    style="
+        position: fixed;
+        top: 0; left: 0;
+        height: 3px;
+        background: #0099ff;
+        width: {$scrollYProgress * 100}%;
+    "
+/>
+```
+
+### Tracking an element
+
+Pass `target` and `offset` to track a specific element's position within the viewport:
+
+```svelte
+<script lang="ts">
+    import { useScroll } from '@humanspeak/svelte-motion'
+
+    let section: HTMLElement
+
+    // Tracks when the section scrolls through the viewport
+    // offset: [[target-start, viewport-start], [target-end, viewport-end]]
+    const { scrollYProgress } = useScroll({
+        target: () => section,
+        offset: [['start end'], ['end start']]
+    })
+</script>
+
+<section bind:this={section}>
+    <motion.h2
+        style="opacity: {$scrollYProgress};"
+    >
+        Fade in as you scroll
+    </motion.h2>
+</section>
+```
+
+<Note>
+  When passing a `bind:this` ref, use a getter function `() => section` so the element is resolved after mount.
+</Note>
+
+### Mapping scroll progress to animation values with `useTransform`
+
+`useTransform` creates a derived store that maps an input range to an output range:
+
+```svelte
+<script lang="ts">
+    import { useScroll, useTransform } from '@humanspeak/svelte-motion'
+
+    const { scrollYProgress } = useScroll()
+
+    // Map scroll 0→1 to scale 1→1.5
+    const scale = useTransform(scrollYProgress, [0, 1], [1, 1.5])
+
+    // Map scroll 0→0.5→1 to opacity 0→1→0
+    const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [0, 1, 0])
+</script>
+
+<div style="transform: scale({$scale}); opacity: {$opacity};">
+    Parallax content
+</div>
+```
+
+#### Multi-segment mapping
+
+Provide more than two stops to create piecewise mappings:
+
+```svelte
+<script lang="ts">
+    import { useScroll, useTransform } from '@humanspeak/svelte-motion'
+
+    const { scrollYProgress } = useScroll()
+
+    // x: -100px → 0px → 100px as the page scrolls
+    const x = useTransform(scrollYProgress, [0, 0.5, 1], [-100, 0, 100])
+</script>
+
+<div style="transform: translateX({$x}px);">
+    Parallax panel
+</div>
+```
+
+## Time-based animations with `useTime`
+
+`useTime` returns a store of elapsed milliseconds since the store was created, ticking once per animation frame. Combine it with `useTransform` for continuous, time-driven animations:
+
+```svelte
+<script lang="ts">
+    import { useTime, useTransform } from '@humanspeak/svelte-motion'
+
+    const time = useTime()
+
+    // Full 360° rotation every 2 seconds
+    const rotate = useTransform(time, [0, 2000], [0, 360], { clamp: false })
+</script>
+
+<div style="transform: rotate({$rotate}deg); width: 40px; height: 40px; background: #0099ff;" />
+```
+
+### Sharing a timeline across components
+
+Pass a shared `id` to synchronize multiple components to the same clock:
+
+```svelte
+<script lang="ts">
+    import { useTime, useTransform } from '@humanspeak/svelte-motion'
+
+    // Both components share the same elapsed time
+    const time = useTime('shared-clock')
+
+    const rotateA = useTransform(time, [0, 3000], [0, 360], { clamp: false })
+    const rotateB = useTransform(time, [0, 1500], [0, 360], { clamp: false })
+</script>
+
+<div style="transform: rotate({$rotateA}deg)" />
+<div style="transform: rotate({$rotateB}deg)" />
+```
+
+## useTransform function form
+
+`useTransform` also accepts a compute function and dependency stores, for derived values that aren't simple range maps:
+
+```svelte
+<script lang="ts">
+    import { useScroll, useTransform } from '@humanspeak/svelte-motion'
+
+    const { scrollX, scrollY } = useScroll()
+
+    // Compute the scroll magnitude from both axes
+    const magnitude = useTransform(
+        () => Math.sqrt($scrollX ** 2 + $scrollY ** 2),
+        [scrollX, scrollY]
+    )
+</script>
+
+<p>Scroll magnitude: {$magnitude.toFixed(1)}px</p>
+```
+
+## SSR behavior
+
+`useScroll` and `useTime` both return static `readable(0)` stores on the server so they are safe to use without guards.

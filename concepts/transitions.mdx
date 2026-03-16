@@ -1,0 +1,184 @@
+---
+title: "Transitions"
+description: "Control how animations move between states using duration, easing, and spring physics."
+---
+
+## Overview
+
+The `transition` prop configures how a motion component animates between states. You can set duration, delay, easing curves, and spring physics. If you omit `transition`, Svelte Motion uses sensible defaults.
+
+```svelte
+<motion.div
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.4, ease: 'easeOut' }}
+/>
+```
+
+## Duration and delay
+
+```svelte
+<motion.div
+    animate={{ y: 0, opacity: 1 }}
+    transition={{
+        duration: 0.5,   // seconds
+        delay: 0.2       // seconds before the animation starts
+    }}
+/>
+```
+
+## Easing functions
+
+Use a named easing string or import an easing function from the package:
+
+```svelte
+<motion.div
+    animate={{ x: 100 }}
+    transition={{ ease: 'easeInOut', duration: 0.4 }}
+/>
+```
+
+Available named strings: `'linear'`, `'easeIn'`, `'easeOut'`, `'easeInOut'`.
+
+For custom cubic bezier curves, import `cubicBezier` and pass four control points:
+
+```svelte
+<script lang="ts">
+    import { motion, cubicBezier } from '@humanspeak/svelte-motion'
+
+    const snappy = cubicBezier(0.25, 0.46, 0.45, 0.94)
+</script>
+
+<motion.div animate={{ x: 100 }} transition={{ ease: snappy, duration: 0.35 }} />
+```
+
+All easing functions exported from Svelte Motion:
+
+| Function | Description |
+|----------|-------------|
+| `easeIn` | Starts slow, ends fast |
+| `easeOut` | Starts fast, ends slow |
+| `easeInOut` | Slow at both ends |
+| `circIn` | Circular ease in |
+| `circOut` | Circular ease out |
+| `circInOut` | Circular ease in and out |
+| `backIn` | Overshoots the start |
+| `backOut` | Overshoots the end |
+| `backInOut` | Overshoots both ends |
+| `anticipate` | Pulls back then launches forward |
+| `cubicBezier` | Custom cubic bezier curve |
+
+## Spring physics
+
+Set `type: 'spring'` to use a physics-based spring animation instead of a duration-based tween. Springs feel more natural for transforms.
+
+```svelte
+<motion.div
+    animate={{ scale: 1, y: 0 }}
+    transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 20
+    }}
+/>
+```
+
+### Spring options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `type` | `'spring'` | Activates spring physics. |
+| `stiffness` | `number` | Higher values make the spring snappier. Default: `100`. |
+| `damping` | `number` | Higher values reduce oscillation. Default: `10`. |
+| `mass` | `number` | Higher values make the spring feel heavier. Default: `1`. |
+| `bounce` | `number` | Shorthand for oscillation amount (0–1). |
+| `visualDuration` | `number` | Target duration in seconds for the visual motion (ignores physics). |
+| `restDelta` | `number` | Threshold below which the animation is considered complete. |
+| `restSpeed` | `number` | Speed threshold below which the animation is considered complete. |
+
+The `visualDuration` + `bounce` combination is the simplest way to dial in a spring:
+
+```svelte
+<motion.div
+    animate={{ scale: 1 }}
+    transition={{
+        type: 'spring',
+        visualDuration: 0.4,
+        bounce: 0.3
+    }}
+/>
+```
+
+## Per-property transitions
+
+Apply different transitions to individual properties by nesting them under the property key:
+
+```svelte
+<motion.div
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{
+        opacity: { duration: 0.2, ease: 'easeOut' },
+        scale: {
+            type: 'spring',
+            visualDuration: 0.4,
+            bounce: 0.5
+        }
+    }}
+/>
+```
+
+This is useful when `opacity` should fade quickly with a tween while `scale` bounces with spring physics.
+
+## Repeating animations
+
+```svelte
+<motion.div
+    animate={{ rotate: 360 }}
+    transition={{
+        duration: 2,
+        repeat: Infinity,
+        ease: 'linear'
+    }}
+/>
+```
+
+| Option | Description |
+|--------|-------------|
+| `repeat` | Number of times to repeat (use `Infinity` to loop). |
+| `repeatType` | `'loop'` (default), `'reverse'`, or `'mirror'`. |
+| `repeatDelay` | Seconds to wait between repetitions. |
+
+## MotionConfig for default transitions
+
+`MotionConfig` sets a default `transition` for all descendant motion components. Per-element `transition` props still override it:
+
+```svelte
+<script lang="ts">
+    import { MotionConfig, motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- All children use duration 0.4 unless they override it -->
+<MotionConfig transition={{ duration: 0.4, ease: 'easeInOut' }}>
+    <motion.div animate={{ opacity: 1 }} />
+    <motion.div animate={{ scale: 1 }} transition={{ duration: 0.2 }} />
+</MotionConfig>
+```
+
+<Tip>
+  Use `MotionConfig` at the layout level to establish consistent animation timing across your entire UI without repeating `transition` on every component.
+</Tip>
+
+## Exit transition precedence
+
+When using `AnimatePresence`, the exit animation transition is merged from multiple sources in the following order (later overrides earlier):
+
+1. Fallback default: `{ duration: 0.35 }`
+2. Component `transition` prop (merged with any `MotionConfig` defaults)
+3. `exit.transition` (highest precedence)
+
+```svelte
+<motion.div
+    exit={{ opacity: 0, transition: { duration: 0.2 } }}
+    transition={{ duration: 0.4 }}
+/>
+<!-- Exit uses duration 0.2 (from exit.transition), enter uses 0.4 -->
+```

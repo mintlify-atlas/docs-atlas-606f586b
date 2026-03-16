@@ -1,0 +1,238 @@
+---
+title: "AnimatePresence"
+description: "Animate components as they enter and leave the DOM. Without AnimatePresence, exit animations are impossible because Svelte destroys the element before any animation can run."
+---
+
+## Why AnimatePresence is needed
+
+When Svelte removes a component from the DOM (e.g. inside an `{#if}` block), it destroys the element immediately. There is no opportunity to run an exit animation on the real element.
+
+`AnimatePresence` solves this by:
+
+1. Detecting when a direct child with a `key` prop is about to unmount
+2. Cloning the element and freezing its last known visual state
+3. Running the `exit` animation on the clone
+4. Removing the clone when the animation finishes
+
+```svelte
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    let show = $state(true)
+</script>
+
+<AnimatePresence>
+    {#if show}
+        <motion.div
+            key="card"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+        />
+    {/if}
+</AnimatePresence>
+
+<button onclick={() => (show = !show)}>Toggle</button>
+```
+
+<Note>
+  Only **direct children** of `AnimatePresence` require a `key` prop. Deeper descendants do not need one.
+</Note>
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `initial` | `boolean` | `true` | When `false`, children present on the first render skip their enter animation |
+| `mode` | `'sync' \| 'wait' \| 'popLayout'` | `'sync'` | Controls how enter and exit animations are coordinated |
+| `onExitComplete` | `() => void` | — | Called once all exit animations have finished |
+
+## Modes
+
+<Tabs>
+  <Tab title="sync (default)">
+    Enter and exit animations run **simultaneously**. The new element animates in at the same time the old one animates out.
+
+    ```svelte
+    <AnimatePresence mode="sync">
+        {#if page === 'a'}
+            <motion.div key="a" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+        {:else}
+            <motion.div key="b" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+        {/if}
+    </AnimatePresence>
+    ```
+
+    Use `sync` (or omit `mode`) for most transitions where you want both elements visible at once.
+  </Tab>
+
+  <Tab title="wait">
+    The exiting element fully animates out **before** the entering element starts its enter animation. Only one element is ever visible at a time.
+
+    ```svelte
+    <AnimatePresence mode="wait">
+        {#if step === 1}
+            <motion.div
+                key="step-1"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+            >
+                Step 1
+            </motion.div>
+        {:else}
+            <motion.div
+                key="step-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+            >
+                Step 2
+            </motion.div>
+        {/if}
+    </AnimatePresence>
+    ```
+
+    Use `wait` for step flows, page transitions, or tab content where overlapping elements look wrong.
+  </Tab>
+
+  <Tab title="popLayout">
+    Like `sync`, but the exiting element is **immediately removed from layout flow** — other elements reflow around the new layout before the exit animation completes.
+
+    ```svelte
+    <AnimatePresence mode="popLayout">
+        {#each items as item (item.id)}
+            <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+            >
+                {item.label}
+            </motion.div>
+        {/each}
+    </AnimatePresence>
+    ```
+
+    Use `popLayout` in lists and grids where you want surrounding items to immediately fill the gap.
+  </Tab>
+</Tabs>
+
+## Exit transition precedence
+
+The transition used for exit animations is resolved in this order (last wins):
+
+| Priority | Source |
+|----------|--------|
+| 1 (lowest) | Fallback default: `{ duration: 0.35 }` |
+| 2 | Component-level `transition` prop |
+| 3 (highest) | `exit.transition` inline override |
+
+```svelte
+<motion.div
+    key="toast"
+    exit={{
+        opacity: 0,
+        y: -8,
+        transition: { duration: 0.15 }  <!-- highest priority -->
+    }}
+    transition={{ duration: 0.4 }}  <!-- overridden by exit.transition -->
+/>
+```
+
+## Multiple children
+
+`AnimatePresence` can manage multiple children simultaneously. Each child needs a unique `key`:
+
+```svelte
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    let notifications = $state([
+        { id: '1', text: 'Saved' },
+        { id: '2', text: 'Changes synced' }
+    ])
+
+    function dismiss(id: string) {
+        notifications = notifications.filter((n) => n.id !== id)
+    }
+</script>
+
+<AnimatePresence>
+    {#each notifications as note (note.id)}
+        <motion.div
+            key={note.id}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
+        >
+            {note.text}
+            <button onclick={() => dismiss(note.id)}>×</button>
+        </motion.div>
+    {/each}
+</AnimatePresence>
+```
+
+<Note>
+  In Svelte `{#each}` blocks, use the key expression `(item.id)` syntax rather than adding a separate `key` prop. Svelte's own key tracking and svelte-motion's `key` prop serve the same role here.
+</Note>
+
+## Using `onExitComplete`
+
+`onExitComplete` fires once **all** exit animations have settled. Use it to clean up state, redirect, or trigger follow-up work:
+
+```svelte
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    let show = $state(true)
+    let exited = $state(false)
+</script>
+
+<AnimatePresence onExitComplete={() => (exited = true)}>
+    {#if show}
+        <motion.div key="box" exit={{ opacity: 0 }} />
+    {/if}
+</AnimatePresence>
+
+{#if exited}
+    <p>Animation complete.</p>
+{/if}
+```
+
+## Disabling initial enter animations
+
+Pass `initial={false}` to `AnimatePresence` to skip enter animations for elements that are **already present** on first render. New elements added later still animate in.
+
+```svelte
+<AnimatePresence initial={false}>
+    {#if show}
+        <motion.div
+            key="box"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+        />
+    {/if}
+</AnimatePresence>
+```
+
+## Nested AnimatePresence
+
+You can nest `AnimatePresence` components. Only **direct children** at each level need `key` props — deeper descendants do not. Each `AnimatePresence` manages its own exit queue independently:
+
+```svelte
+<AnimatePresence>
+    {#if showOuter}
+        <motion.div key="outer" exit={{ opacity: 0 }}>
+            <!-- Inner AnimatePresence — its direct children need their own keys -->
+            <AnimatePresence>
+                {#if showInner}
+                    <motion.div key="inner" exit={{ opacity: 0 }} />
+                {/if}
+            </AnimatePresence>
+        </motion.div>
+    {/if}
+</AnimatePresence>
+```

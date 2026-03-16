@@ -1,0 +1,146 @@
+---
+title: "useVelocity"
+description: "Track the velocity of a MotionValue and use it to build momentum-aware UI."
+---
+
+## Overview
+
+`useVelocity` returns a readable store that tracks the instantaneous velocity of a source store's value, in units per second. Under the hood it uses `motionValue` from `motion-dom` for accurate velocity tracking with timestamps.
+
+When the source stops changing, the velocity store settles back to `0`. It is SSR-safe — on the server it returns a static `readable(0)`.
+
+```typescript
+import { useVelocity } from '@humanspeak/svelte-motion'
+import type { Readable } from 'svelte/store'
+
+function useVelocity(
+    source: Readable<number | string>
+): Readable<number>
+```
+
+<ParamField path="source" type="Readable<number | string>" required>
+  Any readable Svelte store or `MotionValue` whose velocity you want to track. Unit strings such as `"100px"` are supported — the unit is stripped and only the numeric portion is used for velocity calculation.
+</ParamField>
+
+Returns a `Readable<number>` of the current velocity in units/second.
+
+---
+
+## Basic usage
+
+Track how fast a value is changing:
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, useVelocity, styleString } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+  const xVelocity = useVelocity(x)
+
+  function onMouseMove(e: MouseEvent) {
+    x.set(e.clientX)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<p>Velocity: {Math.round($xVelocity)}px/s</p>
+<div style={styleString({ x: $x })} class="tracker" />
+```
+
+---
+
+## Velocity-based effects
+
+### Spring-backed velocity indicator
+
+Combine `useVelocity` with `useTransform` to map cursor speed to a visual skew effect:
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useVelocity,
+    useTransform,
+    useSpring,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+  const xVelocity = useVelocity(x)
+
+  // Map velocity to a skew angle — fast rightward movement = positive skew
+  const skewX = useTransform(xVelocity, [-2000, 2000], [-20, 20])
+  // Smooth the skew with a spring
+  const smoothSkewX = useSpring(skewX, { stiffness: 300, damping: 30 })
+
+  function onMouseMove(e: MouseEvent) {
+    x.set(e.clientX)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<div
+  style={styleString({ x: $x, skewX: $smoothSkewX })}
+  class="card"
+>
+  Moving card
+</div>
+```
+
+### Scroll velocity
+
+Track how fast the user is scrolling:
+
+```svelte
+<script lang="ts">
+  import {
+    useScroll,
+    useVelocity,
+    useTransform,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const { scrollY } = useScroll()
+  const scrollVelocity = useVelocity(scrollY)
+
+  // Scale an element based on scroll speed
+  const scale = useTransform(scrollVelocity, [-3000, 0, 3000], [0.8, 1, 0.8])
+</script>
+
+<div style={styleString({ scale: $scale })} class="header">
+  Fast scrolling compresses me
+</div>
+```
+
+### Velocity-driven colour
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useVelocity,
+    useTransform,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+  const xVelocity = useVelocity(x)
+
+  // Opacity indicates how fast the element is moving
+  const opacity = useTransform(xVelocity, [-1000, 0, 1000], [0.3, 1, 0.3])
+
+  function onMouseMove(e: MouseEvent) {
+    x.set(e.clientX)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<div style={styleString({ x: $x, opacity: $opacity })} class="dot" />
+```
+
+<Note>
+  Velocity is polled via `requestAnimationFrame` and settles to `0` when the absolute velocity drops below `0.001` units/second. There is a small lag between when a value stops changing and when the velocity store reads `0`.
+</Note>

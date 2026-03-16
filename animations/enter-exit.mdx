@@ -1,0 +1,238 @@
+---
+title: "Enter & exit animations"
+description: "Animate elements as they mount and unmount using `initial`, `animate`, and `exit` props."
+---
+
+Motion components animate between two states: the `initial` state (where the element starts) and the `animate` state (where it ends up). Exit animations run when an element leaves the DOM — but they require `AnimatePresence` to work.
+
+## Enter animations
+
+Every motion component supports `initial` and `animate` props. When the component mounts, it transitions from `initial` to `animate`.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    initial={{ opacity: 0, y: 16 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+>
+    Hello
+</motion.div>
+```
+
+### Using `initial` as an object
+
+Pass any animatable CSS property or motion shorthand (`x`, `y`, `scale`, `rotate`, etc.) directly as an object:
+
+```svelte
+<motion.div
+    initial={{ opacity: 0, scale: 0.85, x: -20 }}
+    animate={{ opacity: 1, scale: 1, x: 0 }}
+/>
+```
+
+### Using `initial` as a variant key
+
+If you've defined `variants`, you can reference a named state by string:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    const variants: Variants = {
+        hidden: { opacity: 0, y: 24 },
+        visible: { opacity: 1, y: 0 }
+    }
+</script>
+
+<motion.div
+    {variants}
+    initial="hidden"
+    animate="visible"
+    transition={{ duration: 0.4 }}
+/>
+```
+
+### Disabling the enter animation with `initial={false}`
+
+Set `initial={false}` to skip the enter animation on first render. The element renders immediately at its `animate` state. Subsequent mounts (re-entries after exit) still animate.
+
+```svelte
+<!-- Renders at opacity 1 instantly — no fade-in on first mount -->
+<motion.div
+    initial={false}
+    animate={{ opacity: 1 }}
+/>
+```
+
+This is also how `AnimatePresence initial={false}` works: children that are already present when the component first mounts skip their enter animations, but newly added children animate in normally.
+
+<Note>
+  `initial={false}` only suppresses the enter animation on the **initial mount**. If the element is removed and re-added inside an `AnimatePresence`, it animates in again.
+</Note>
+
+## Exit animations
+
+Exit animations run when a component is removed from the DOM. Because Svelte destroys the element immediately on unmount, you need `AnimatePresence` to intercept the removal, clone the element, and animate the clone out.
+
+<Steps>
+  <Step title="Wrap with AnimatePresence">
+    Import and add `AnimatePresence` around the conditionally rendered content:
+
+    ```svelte
+    <script lang="ts">
+        import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+        let show = $state(true)
+    </script>
+
+    <AnimatePresence>
+        {#if show}
+            <motion.div key="box" exit={{ opacity: 0 }} />
+        {/if}
+    </AnimatePresence>
+    ```
+  </Step>
+
+  <Step title="Add a key prop">
+    Direct children of `AnimatePresence` require a `key` prop so the library can track enter/exit state.
+
+    ```svelte
+    <motion.div key="my-card" exit={{ opacity: 0 }} />
+    ```
+  </Step>
+
+  <Step title="Define the exit state">
+    Pass the `exit` prop with the animation target for when the element leaves:
+
+    ```svelte
+    <motion.div
+        key="my-card"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+    />
+    ```
+  </Step>
+</Steps>
+
+### Exit transition
+
+You can override the transition used during exit by embedding a `transition` key directly in the `exit` object. Precedence order (last wins):
+
+1. Fallback default: `{ duration: 0.35 }`
+2. Component-level `transition` prop
+3. `exit.transition` (highest priority)
+
+```svelte
+<motion.div
+    key="toast"
+    initial={{ opacity: 0, y: -8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
+/>
+```
+
+### Using a variant key for `exit`
+
+Like `initial` and `animate`, the `exit` prop can be a variant key string:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    const variants: Variants = {
+        hidden: { opacity: 0, scale: 0.8 },
+        visible: { opacity: 1, scale: 1 }
+    }
+</script>
+
+<motion.div
+    {variants}
+    initial="hidden"
+    animate="visible"
+    exit="hidden"
+/>
+```
+
+## Common patterns
+
+<CodeGroup>
+
+```svelte Fade in/out
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    let visible = $state(true)
+</script>
+
+<AnimatePresence>
+    {#if visible}
+        <motion.div
+            key="fade"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+        >
+            Fade me
+        </motion.div>
+    {/if}
+</AnimatePresence>
+```
+
+```svelte Slide up/down
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    let visible = $state(true)
+</script>
+
+<AnimatePresence>
+    {#if visible}
+        <motion.div
+            key="slide"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+            Slide me
+        </motion.div>
+    {/if}
+</AnimatePresence>
+```
+
+```svelte Scale in/out
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    let visible = $state(true)
+</script>
+
+<AnimatePresence>
+    {#if visible}
+        <motion.div
+            key="scale"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ type: 'spring', visualDuration: 0.35, bounce: 0.3 }}
+        >
+            Scale me
+        </motion.div>
+    {/if}
+</AnimatePresence>
+```
+
+</CodeGroup>
+
+## Checklist
+
+- `exit` only works when the component is wrapped in `AnimatePresence`
+- Direct children of `AnimatePresence` must have a unique `key` prop
+- Set `initial={false}` on `AnimatePresence` to skip enter animations for elements present on first render
+- To control exit timing independently, embed `transition` inside `exit`

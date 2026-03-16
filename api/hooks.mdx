@@ -1,0 +1,514 @@
+---
+title: "Hooks & Utilities"
+description: "Reactive utility functions for building animation-driven UIs in Svelte 5."
+---
+
+Svelte Motion exports a set of utility hooks that mirror the Framer Motion hook API. All hooks are SSR-safe and return Svelte stores (compatible with the `$` reactive syntax).
+
+## Import
+
+```typescript
+import {
+  useMotionValue,
+  useMotionValueEvent,
+  useSpring,
+  useTransform,
+  useAnimationFrame,
+  useTime,
+  useVelocity,
+  useMotionTemplate,
+  useScroll,
+  createDragControls,
+  styleString
+} from '@humanspeak/svelte-motion'
+```
+
+---
+
+## useMotionValue
+
+Creates a reactive value store with `get` and `set` methods.
+
+```typescript
+function useMotionValue<T = number>(initial: T): MotionValue<T>
+```
+
+<ParamField path="initial" type="T" required>
+  The initial value of the motion value.
+</ParamField>
+
+<ResponseField name="returns" type="MotionValue<T>">
+  A Svelte readable store with `.subscribe()`, `.get()`, and `.set()` methods.
+</ResponseField>
+
+```svelte
+<script>
+  import { useMotionValue } from '@humanspeak/svelte-motion'
+  const x = useMotionValue(0)
+
+  function handleClick() {
+    x.set(100)
+  }
+</script>
+
+<motion.div style={`transform: translateX(${$x}px)`} />
+```
+
+---
+
+## useMotionValueEvent
+
+Subscribes to a `MotionValue` store and fires a callback on every **change**, skipping the initial synchronous emission.
+
+```typescript
+function useMotionValueEvent<T>(
+  store: Readable<T>,
+  event: 'change',
+  callback: (latest: T) => void
+): () => void
+```
+
+<ParamField path="store" type="Readable<T>" required>
+  Any Svelte readable store to observe.
+</ParamField>
+
+<ParamField path="event" type="'change'" required>
+  The event type. Currently only `'change'` is supported.
+</ParamField>
+
+<ParamField path="callback" type="(latest: T) => void" required>
+  Called with the latest value on each change after the initial emission.
+</ParamField>
+
+<ResponseField name="returns" type="() => void">
+  An unsubscribe function. Call inside `$effect` return or `onDestroy` for cleanup.
+</ResponseField>
+
+```svelte
+<script>
+  import { useSpring, useMotionValueEvent } from '@humanspeak/svelte-motion'
+  import { onDestroy } from 'svelte'
+
+  const x = useSpring(0)
+  const unsub = useMotionValueEvent(x, 'change', (latest) => {
+    console.log('x is now', latest)
+  })
+  onDestroy(unsub)
+</script>
+```
+
+---
+
+## useSpring
+
+Creates a spring-animated store. The store exposes `set` to animate to a target value, and `jump` to instantly set the value without animation. When passed another readable store, it automatically follows it.
+
+```typescript
+function useSpring(
+  source: number | string | Readable<number | string>,
+  options?: SpringOptions
+): Readable<number | string> & { set: (v: number | string) => void; jump: (v: number | string) => void }
+```
+
+<ParamField path="source" type="number | string | Readable<number | string>" required>
+  Initial value, unit string (e.g. `'100px'`), or a readable store to follow.
+</ParamField>
+
+<ParamField path="options" type="SpringOptions">
+  <Expandable title="SpringOptions properties">
+    <ParamField path="stiffness" type="number">
+      Spring stiffness (higher = snappier). Default: `170`.
+    </ParamField>
+    <ParamField path="damping" type="number">
+      Spring damping (higher = less oscillation). Default: `26`.
+    </ParamField>
+    <ParamField path="mass" type="number">
+      Mass of the object. Default: `1`.
+    </ParamField>
+    <ParamField path="restDelta" type="number">
+      Absolute position delta threshold to stop. Default: `0.01`.
+    </ParamField>
+    <ParamField path="restSpeed" type="number">
+      Velocity magnitude threshold to stop. Default: `0.01`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="returns" type="Readable<number | string> & { set, jump }">
+  A readable store. Call `.set(v)` to animate to a new value; `.jump(v)` to instantly set without animation.
+</ResponseField>
+
+```svelte
+<script>
+  import { useSpring } from '@humanspeak/svelte-motion'
+
+  const x = useSpring(0, { stiffness: 300, damping: 30 })
+</script>
+
+<motion.div
+  style={`transform: translateX(${$x}px)`}
+  onmouseenter={() => x.set(50)}
+  onmouseleave={() => x.set(0)}
+/>
+```
+
+### Following a source store
+
+```svelte
+<script>
+  import { useScroll, useSpring } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 })
+</script>
+
+<div style={`transform: scaleX(${$scaleX}); transform-origin: left;`} />
+```
+
+---
+
+## useTransform
+
+Creates a derived store by mapping a source value through input/output ranges, or by computing a value from a function and dependency stores.
+
+```typescript
+// Mapping form
+function useTransform<T>(
+  source: Readable<number>,
+  inputRange: number[],
+  outputRange: T[],
+  options?: TransformOptions
+): Readable<T>
+
+// Function form
+function useTransform<T>(
+  compute: () => T,
+  deps: Readable<unknown>[]
+): Readable<T>
+```
+
+<ParamField path="source / compute" type="Readable<number> | (() => T)" required>
+  - **Mapping form**: A readable store of numbers to map.
+  - **Function form**: A compute function whose result will be the store value.
+</ParamField>
+
+<ParamField path="inputRange / deps" type="number[] | Readable<unknown>[]" required>
+  - **Mapping form**: Array of input stops. Must be same length as `outputRange`.
+  - **Function form**: Array of dependency stores that trigger re-computation.
+</ParamField>
+
+<ParamField path="outputRange" type="T[]">
+  Array of output values, one per input stop. Required for the mapping form.
+</ParamField>
+
+<ParamField path="options" type="TransformOptions">
+  <Expandable title="TransformOptions properties">
+    <ParamField path="clamp" type="boolean">
+      If `true`, clamps the input to the segment bounds. Default: `true`.
+    </ParamField>
+    <ParamField path="ease" type="((t: number) => number) | Array<(t: number) => number>">
+      Single easing function or one per segment to shape interpolation.
+    </ParamField>
+    <ParamField path="mixer" type="(from: unknown, to: unknown) => (t: number) => unknown">
+      Custom mixer factory for interpolating non-numeric outputs.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="returns" type="Readable<T>">
+  A derived Svelte readable store.
+</ResponseField>
+
+```svelte
+<script>
+  import { useScroll, useTransform } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+  // Map 0–1 scroll progress to 1–0 opacity
+  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0])
+</script>
+
+<div style={`opacity: ${$opacity}`}>Fades as you scroll</div>
+```
+
+---
+
+## useAnimationFrame
+
+Runs a callback on every animation frame with the current `DOMHighResTimeStamp`. SSR-safe — does nothing when `window` is unavailable.
+
+```typescript
+function useAnimationFrame(callback: (time: DOMHighResTimeStamp) => void): () => void
+```
+
+<ParamField path="callback" type="(time: DOMHighResTimeStamp) => void" required>
+  Called on each animation frame. Receives the current high-resolution timestamp.
+</ParamField>
+
+<ResponseField name="returns" type="() => void">
+  A cleanup function that cancels the animation loop. Use as the return value of `$effect`.
+</ResponseField>
+
+```svelte
+<script>
+  import { useAnimationFrame } from '@humanspeak/svelte-motion'
+
+  let ref = $state(null)
+
+  $effect(() => {
+    return useAnimationFrame((t) => {
+      if (!ref) return
+      ref.style.transform = `rotate(${t / 20}deg)`
+    })
+  })
+</script>
+
+<div bind:this={ref}>Spinning element</div>
+```
+
+---
+
+## useTime
+
+Returns a readable store that ticks every animation frame with elapsed milliseconds since the store was created.
+
+```typescript
+function useTime(id?: string): Readable<number>
+```
+
+<ParamField path="id" type="string">
+  Optional shared timeline identifier. Callers that use the same `id` share a single store instance, ensuring synchronised reads across components.
+</ParamField>
+
+<ResponseField name="returns" type="Readable<number>">
+  A readable store of elapsed milliseconds. Returns a static `readable(0)` on the server.
+</ResponseField>
+
+```svelte
+<script>
+  import { useTime, useTransform } from '@humanspeak/svelte-motion'
+
+  const t = useTime()
+  const rotate = useTransform(t, [0, 3000], [0, 360], { clamp: false })
+</script>
+
+<motion.div style={`rotate: ${$rotate}deg`} />
+```
+
+---
+
+## useVelocity
+
+Creates a store that tracks the velocity (units/second) of a source store's value.
+
+```typescript
+function useVelocity(source: Readable<number | string>): Readable<number>
+```
+
+<ParamField path="source" type="Readable<number | string>" required>
+  A readable store whose velocity should be tracked. Unit strings like `'100px'` are parsed to their numeric component.
+</ParamField>
+
+<ResponseField name="returns" type="Readable<number>">
+  A readable store of the current velocity in units/second. Returns `readable(0)` on the server.
+</ResponseField>
+
+```svelte
+<script>
+  import { useSpring, useVelocity, useTransform } from '@humanspeak/svelte-motion'
+
+  const x = useSpring(0)
+  const xVelocity = useVelocity(x)
+  const skewX = useTransform(xVelocity, [-500, 500], [-10, 10])
+</script>
+
+<motion.div style={`transform: skewX(${$skewX}deg)`} />
+```
+
+---
+
+## useMotionTemplate
+
+Tagged template literal that creates a derived string store from interpolated readable stores.
+
+```typescript
+function useMotionTemplate(
+  strings: TemplateStringsArray,
+  ...values: Readable<number | string>[]
+): Readable<string>
+```
+
+<ParamField path="strings" type="TemplateStringsArray" required>
+  Static template string parts (provided by the tagged template syntax).
+</ParamField>
+
+<ParamField path="values" type="Readable<number | string>[]" required>
+  Readable stores to interpolate into the template.
+</ParamField>
+
+<ResponseField name="returns" type="Readable<string>">
+  A derived store that recomputes the string whenever any input store changes.
+</ResponseField>
+
+```svelte
+<script>
+  import { useSpring, useMotionTemplate } from '@humanspeak/svelte-motion'
+
+  const blur = useSpring(0)
+  const filter = useMotionTemplate`blur(${blur}px)`
+</script>
+
+<motion.div
+  style={`filter: ${$filter}`}
+  whileHover={() => blur.set(4)}
+  onmouseleave={() => blur.set(0)}
+/>
+```
+
+---
+
+## useScroll
+
+Creates scroll-linked Svelte stores for building scroll-driven animations. SSR-safe.
+
+```typescript
+function useScroll(options?: UseScrollOptions): {
+  scrollX: Readable<number>
+  scrollY: Readable<number>
+  scrollXProgress: Readable<number>
+  scrollYProgress: Readable<number>
+}
+```
+
+<ParamField path="options" type="UseScrollOptions">
+  <Expandable title="UseScrollOptions properties">
+    <ParamField path="container" type="HTMLElement | (() => HTMLElement | undefined)">
+      Scrollable container to track. Defaults to the page. Accepts an element or a getter function for deferred resolution (useful with `bind:this`).
+    </ParamField>
+    <ParamField path="target" type="HTMLElement | (() => HTMLElement | undefined)">
+      Element whose position within the container to track.
+    </ParamField>
+    <ParamField path="offset" type="Array<[number | string, number | string]> | string[]">
+      Scroll offset configuration. Each entry is a `[target, container]` pair using numbers (0–1) or strings (`'start'`, `'end'`, `'center'`).
+    </ParamField>
+    <ParamField path="axis" type="'x' | 'y'">
+      Which axis to use for the single-axis `progress` value. Default: `'y'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="returns" type="{ scrollX, scrollY, scrollXProgress, scrollYProgress }">
+  Four readable stores:
+  - `scrollX` / `scrollY` — absolute scroll position in pixels.
+  - `scrollXProgress` / `scrollYProgress` — normalised progress `0–1`.
+</ResponseField>
+
+```svelte
+<script>
+  import { useScroll, useSpring } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 })
+</script>
+
+<!-- Scroll progress bar -->
+<div
+  style={`
+    position: fixed; top: 0; left: 0; right: 0; height: 4px;
+    transform: scaleX(${$scaleX}); transform-origin: left;
+    background: blue;
+  `}
+/>
+```
+
+### Element scroll tracking
+
+```svelte
+<script>
+  import { useScroll } from '@humanspeak/svelte-motion'
+
+  let section = $state(null)
+  const { scrollYProgress } = useScroll({
+    target: () => section,
+    offset: [['start end'], ['end start']]
+  })
+</script>
+
+<div bind:this={section}>
+  <div style={`opacity: ${$scrollYProgress}`}>Fades in on scroll</div>
+</div>
+```
+
+---
+
+## createDragControls
+
+Creates an imperative `DragControls` object for starting drags from an external element.
+
+```typescript
+function createDragControls(): DragControls
+```
+
+<ResponseField name="returns" type="DragControls">
+  An object with four methods:
+
+  | Method | Signature | Description |
+  |--------|-----------|-------------|
+  | `start` | `(event: PointerEvent, options?: { snapToCursor?: boolean; distanceThreshold?: number }) => void` | Imperatively start a drag from any pointer event. |
+  | `cancel` | `() => void` | Cancel an active drag without momentum. |
+  | `stop` | `() => void` | Stop the current drag and any momentum animation. |
+  | `subscribe` | `(el: HTMLElement) => void` | Subscribe the controls to a target element. |
+</ResponseField>
+
+```svelte
+<script>
+  import { motion, createDragControls } from '@humanspeak/svelte-motion'
+
+  const controls = createDragControls()
+</script>
+
+<button onpointerdown={(e) => controls.start(e, { snapToCursor: true })}>
+  Drag handle
+</button>
+
+<motion.div
+  drag
+  dragControls={controls}
+  dragListener={false}
+  dragConstraints={{ left: -100, right: 100 }}
+/>
+```
+
+---
+
+## styleString
+
+Converts a style object (or a factory function returning one) to a CSS style string. In Svelte 5, template expressions are reactive, so `styleString` can be used directly in templates.
+
+```typescript
+function styleString(input: StyleObject | (() => StyleObject)): string
+// StyleObject = Record<string, string | number>
+```
+
+<ParamField path="input" type="Record<string, string | number> | (() => Record<string, string | number>)" required>
+  A plain style object or a function that returns one. Numeric values receive appropriate units.
+</ParamField>
+
+<ResponseField name="returns" type="string">
+  A CSS style attribute string, e.g. `"opacity: 0.5; transform: scale(1.1);"`. Reactive when `$state` variables are used in a Svelte 5 template.
+</ResponseField>
+
+```svelte
+<script>
+  import { styleString } from '@humanspeak/svelte-motion'
+
+  let scale = $state(1)
+  let opacity = $state(1)
+</script>
+
+<!-- Object form -->
+<div style={styleString({ scale, opacity })}>Content</div>
+
+<!-- Factory form (also reactive) -->
+<div style={styleString(() => ({ scale, opacity }))}>Content</div>
+```

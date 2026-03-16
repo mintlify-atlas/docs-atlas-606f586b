@@ -1,0 +1,256 @@
+---
+title: "Transition Options"
+description: "Configure how animations play with duration, easing, spring physics, and per-property overrides."
+---
+
+The `transition` prop (type: `AnimationOptions` from `motion`) controls how an animation plays. You can configure duration, delay, easing, physics, and more. Svelte Motion passes `transition` directly through to the underlying `motion` library.
+
+## Import
+
+```typescript
+import type { MotionTransition } from '@humanspeak/svelte-motion'
+// AnimationOptions is from 'motion'
+```
+
+## Common options
+
+<ParamField path="type" type="'tween' | 'spring' | 'inertia'">
+  The animation driver.
+
+  - `tween` — Time-based eased animation (default when a `duration` or `ease` is provided).
+  - `spring` — Physics-based spring animation.
+  - `inertia` — Momentum-based decay, typically used for post-drag settling.
+</ParamField>
+
+<ParamField path="delay" type="number">
+  Time in seconds to wait before the animation starts.
+
+  ```svelte
+  <motion.div animate={{ opacity: 1 }} transition={{ delay: 0.3 }} />
+  ```
+</ParamField>
+
+<ParamField path="repeat" type="number">
+  Number of times to repeat the animation. `Infinity` repeats forever.
+</ParamField>
+
+<ParamField path="repeatType" type="'loop' | 'reverse' | 'mirror'">
+  How to repeat:
+  - `loop` — restart from the beginning each time.
+  - `reverse` — alternate direction on each repeat.
+  - `mirror` — alternate easing on each repeat.
+</ParamField>
+
+<ParamField path="repeatDelay" type="number">
+  Seconds to wait between repeats.
+</ParamField>
+
+---
+
+## Tween options
+
+Used when `type: 'tween'` (or when a duration/ease is provided without `type`).
+
+<ParamField path="duration" type="number">
+  Length of the animation in seconds. Default is `0.3`.
+
+  ```svelte
+  <motion.div animate={{ x: 100 }} transition={{ duration: 0.5 }} />
+  ```
+</ParamField>
+
+<ParamField path="ease" type="string | number[] | ((t: number) => number)">
+  Easing function or name. Accepts:
+  - Named strings: `'linear'`, `'easeIn'`, `'easeOut'`, `'easeInOut'`, `'circIn'`, `'circOut'`, `'backIn'`, `'backOut'`, etc.
+  - Cubic bezier array: `[0.17, 0.67, 0.83, 0.67]`
+  - Custom function: `(t) => t * t`
+
+  ```svelte
+  <motion.div
+    animate={{ opacity: 1 }}
+    transition={{ ease: 'easeOut', duration: 0.4 }}
+  />
+  ```
+</ParamField>
+
+<ParamField path="times" type="number[]">
+  For keyframe animations, the progress offset (0–1) for each keyframe. Must match the number of keyframe values.
+
+  ```svelte
+  <motion.div
+    animate={{ x: [0, 50, 100] }}
+    transition={{ times: [0, 0.2, 1], duration: 1 }}
+  />
+  ```
+</ParamField>
+
+---
+
+## Spring options
+
+Used when `type: 'spring'`.
+
+<ParamField path="stiffness" type="number">
+  Spring stiffness. Higher values create snappier, tighter springs. Default: `100`.
+</ParamField>
+
+<ParamField path="damping" type="number">
+  Resistance that slows the spring. Lower values allow more oscillation. Default: `10`.
+</ParamField>
+
+<ParamField path="mass" type="number">
+  Mass of the object being animated. Higher mass = more inertia and slower response. Default: `1`.
+</ParamField>
+
+<ParamField path="velocity" type="number">
+  Initial velocity of the spring (units/second).
+</ParamField>
+
+<ParamField path="bounce" type="number">
+  Shorthand for controlling oscillation. Range `0` (no bounce) to `1` (maximum bounce). When set, `damping` is ignored.
+</ParamField>
+
+<ParamField path="visualDuration" type="number">
+  Shorthand for perceived duration in seconds. When set, `stiffness` is automatically calculated so the animation appears to complete in this time. `bounce` is still respected.
+
+  ```svelte
+  <motion.div
+    animate={{ scale: 1.1 }}
+    transition={{ type: 'spring', visualDuration: 0.4, bounce: 0.3 }}
+  />
+  ```
+</ParamField>
+
+<ParamField path="restDelta" type="number">
+  Distance from the target at which the spring is considered at rest. Default: `0.01`.
+</ParamField>
+
+<ParamField path="restSpeed" type="number">
+  Velocity below which the spring is considered at rest. Default: `0.01`.
+</ParamField>
+
+---
+
+## Inertia options
+
+Used when `type: 'inertia'`, typically for post-drag settling.
+
+<ParamField path="power" type="number">
+  Scales the momentum from velocity. Higher values = greater distance traveled. Default: `0.8`.
+</ParamField>
+
+<ParamField path="timeConstant" type="number">
+  Time constant of the decay curve in milliseconds. Higher = slower decay. Default: `700`.
+</ParamField>
+
+<ParamField path="restDelta" type="number">
+  Distance from rest at which the animation stops.
+</ParamField>
+
+<ParamField path="restSpeed" type="number">
+  Speed below which the animation stops.
+</ParamField>
+
+<ParamField path="min" type="number">
+  Minimum value boundary. If the animation would exceed this, it bounces.
+</ParamField>
+
+<ParamField path="max" type="number">
+  Maximum value boundary. If the animation would exceed this, it bounces.
+</ParamField>
+
+---
+
+## Per-property transition overrides
+
+You can override the transition for individual animated properties by adding them as keys:
+
+```svelte
+<motion.div
+  animate={{ x: 100, opacity: 1 }}
+  transition={{
+    duration: 0.4,
+    x: { type: 'spring', stiffness: 300, damping: 20 },
+    opacity: { duration: 0.2 }
+  }}
+/>
+```
+
+The top-level options act as defaults; property-level keys override them.
+
+---
+
+## Examples
+
+<Tabs>
+  <Tab title="Tween">
+    ```svelte
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        type: 'tween',
+        duration: 0.4,
+        ease: 'easeOut'
+      }}
+    />
+    ```
+  </Tab>
+  <Tab title="Spring">
+    ```svelte
+    <motion.div
+      animate={{ scale: 1.1 }}
+      transition={{
+        type: 'spring',
+        stiffness: 260,
+        damping: 20
+      }}
+    />
+    ```
+  </Tab>
+  <Tab title="Spring (shorthand)">
+    ```svelte
+    <motion.div
+      animate={{ x: 50 }}
+      transition={{
+        type: 'spring',
+        visualDuration: 0.35,
+        bounce: 0.4
+      }}
+    />
+    ```
+  </Tab>
+  <Tab title="Keyframes">
+    ```svelte
+    <motion.div
+      animate={{ x: [0, 30, 0] }}
+      transition={{
+        duration: 1,
+        times: [0, 0.5, 1],
+        repeat: Infinity,
+        ease: 'easeInOut'
+      }}
+    />
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Easing function names
+
+| Name | Description |
+|------|-------------|
+| `linear` | Constant speed throughout. |
+| `easeIn` | Starts slow, ends fast. |
+| `easeOut` | Starts fast, ends slow. |
+| `easeInOut` | Starts and ends slow, fast in the middle. |
+| `circIn` | Circular acceleration from rest. |
+| `circOut` | Circular deceleration to rest. |
+| `circInOut` | Circular acceleration then deceleration. |
+| `backIn` | Anticipation — slight backward pull before moving. |
+| `backOut` | Overshoot — slight overshoot before settling. |
+| `backInOut` | Anticipation and overshoot combined. |
+| `anticipate` | Pull back then accelerate forward quickly. |
+
+See [Easing Functions](/api/easing-functions) for importable easing function values.

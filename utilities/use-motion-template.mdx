@@ -1,0 +1,149 @@
+---
+title: "useMotionTemplate"
+description: "Compose a string MotionValue from a template literal containing embedded MotionValues."
+---
+
+## Overview
+
+`useMotionTemplate` is a tagged template literal function that produces a `Readable<string>` whose value recomputes whenever any of the embedded stores change. It is the simplest way to build a dynamic CSS value string from multiple MotionValues without manually writing a `derived` store.
+
+It is SSR-safe — `derived` from `svelte/store` works on the server.
+
+```typescript
+import { useMotionTemplate } from '@humanspeak/svelte-motion'
+import type { Readable } from 'svelte/store'
+
+function useMotionTemplate(
+    strings: TemplateStringsArray,
+    ...values: Readable<number | string>[]
+): Readable<string>
+```
+
+<ParamField path="strings" type="TemplateStringsArray" required>
+  The static string segments of the template literal. Provided automatically by the tagged template syntax.
+</ParamField>
+
+<ParamField path="values" type="Readable<number | string>[]">  
+  Any number of Svelte readable stores or MotionValues to interpolate into the string. Each store's current value is inserted at the corresponding `${...}` position.
+</ParamField>
+
+Returns a `Readable<string>` that updates whenever any interpolated store changes.
+
+---
+
+## Basic usage
+
+Use it exactly like a template literal but with a tag:
+
+```svelte
+<script lang="ts">
+  import { useSpring, useMotionTemplate } from '@humanspeak/svelte-motion'
+
+  const blur = useSpring(0, { stiffness: 100, damping: 20 })
+  const filter = useMotionTemplate`blur(${blur}px)`
+  // $filter → "blur(0px)", updating every frame as blur animates
+</script>
+
+<div style="filter: {$filter}" class="glass">
+  Hover to focus
+</div>
+
+<button
+  onmouseenter={() => blur.set(0)}
+  onmouseleave={() => blur.set(10)}
+>
+  Toggle blur
+</button>
+```
+
+---
+
+## Examples
+
+### CSS filter with multiple values
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useSpring,
+    useMotionTemplate,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const rawBlur = useMotionValue(0)
+  const rawBrightness = useMotionValue(1)
+
+  const blur = useSpring(rawBlur, { stiffness: 200, damping: 25 })
+  const brightness = useSpring(rawBrightness, { stiffness: 200, damping: 25 })
+
+  const filter = useMotionTemplate`blur(${blur}px) brightness(${brightness})`
+
+  function onHover() {
+    rawBlur.set(0)
+    rawBrightness.set(1.2)
+  }
+  function onLeave() {
+    rawBlur.set(6)
+    rawBrightness.set(0.8)
+  }
+</script>
+
+<div
+  style="filter: {$filter}"
+  onmouseenter={onHover}
+  onmouseleave={onLeave}
+  class="card"
+/>
+```
+
+### 3D transform string
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useTransform,
+    useMotionTemplate
+  } from '@humanspeak/svelte-motion'
+
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  const rotateX = useTransform(mouseY, [-300, 300], [15, -15])
+  const rotateY = useTransform(mouseX, [-300, 300], [-15, 15])
+
+  const transform = useMotionTemplate`perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`
+
+  function onMouseMove(e: MouseEvent) {
+    mouseX.set(e.clientX - window.innerWidth / 2)
+    mouseY.set(e.clientY - window.innerHeight / 2)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<div style="transform: {$transform}" class="card-3d" />
+```
+
+### Background gradient animation
+
+```svelte
+<script lang="ts">
+  import { useTime, useTransform, useMotionTemplate } from '@humanspeak/svelte-motion'
+
+  const time = useTime()
+
+  // Cycle hue from 0 to 360 every 4 seconds, unclamped
+  const hue = useTransform(time, [0, 4000], [0, 360], { clamp: false })
+
+  // Compose into a full CSS gradient string
+  const gradient = useMotionTemplate`linear-gradient(${hue}deg, #6366f1, #a855f7)`
+</script>
+
+<div style="background: {$gradient}" class="gradient-banner" />
+```
+
+<Tip>
+  `useMotionTemplate` accepts any `Readable<number | string>`, not just MotionValues created with `useMotionValue`. You can pass stores from `useSpring`, `useTransform`, `useTime`, or any other source.
+</Tip>

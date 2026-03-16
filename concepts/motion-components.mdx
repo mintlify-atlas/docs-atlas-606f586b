@@ -1,0 +1,189 @@
+---
+title: "Motion components"
+description: "motion.<tag> gives you any HTML or SVG element with built-in animation capabilities."
+---
+
+## What are motion components?
+
+A motion component is a standard HTML or SVG element extended with animation props. You use them exactly like their native counterparts — with `class`, `style`, `onclick`, and any other attribute — plus a small set of animation-specific props like `initial`, `animate`, `exit`, `transition`, and gesture handlers.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- Works exactly like a <div>, with animation props added -->
+<motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+    class="card"
+>
+    Content
+</motion.div>
+```
+
+## Basic props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `initial` | `object \| string \| false` | Starting state for the enter animation. |
+| `animate` | `object \| string` | Target animation state. |
+| `exit` | `object \| string` | State to animate to before unmounting (requires `AnimatePresence`). |
+| `transition` | `object` | Timing, easing, and physics configuration. |
+| `variants` | `object` | Named animation states. |
+| `whileHover` | `object` | Animate while the pointer hovers the element. |
+| `whileTap` | `object` | Animate while the element is pressed. |
+| `whileFocus` | `object` | Animate while the element has keyboard focus. |
+| `whileInView` | `object` | Animate while the element is in the viewport. |
+| `whileDrag` | `object` | Animate while the element is being dragged. |
+| `layout` | `boolean \| 'position'` | Enable FLIP layout animation. |
+| `layoutId` | `string` | Shared layout animation identifier. |
+| `drag` | `boolean \| 'x' \| 'y'` | Enable drag gestures. |
+| `ref` | `HTMLElement \| null` | Access the underlying DOM element. |
+
+## Supported tags
+
+Svelte Motion generates a component for every animatable HTML and SVG element. Common elements include:
+
+**HTML elements:**
+`motion.div`, `motion.span`, `motion.button`, `motion.a`, `motion.p`, `motion.h1`–`motion.h6`,
+`motion.ul`, `motion.li`, `motion.ol`, `motion.section`, `motion.article`, `motion.aside`,
+`motion.header`, `motion.footer`, `motion.nav`, `motion.main`, `motion.form`, `motion.input`,
+`motion.textarea`, `motion.select`, `motion.img`, `motion.video`, `motion.audio`,
+`motion.canvas`, `motion.table`, `motion.tr`, `motion.td`, `motion.th`, `motion.dialog`, `motion.details`
+
+**SVG elements:**
+`motion.svg`, `motion.path`, `motion.circle`, `motion.rect`, `motion.ellipse`, `motion.line`,
+`motion.polygon`, `motion.polyline`, `motion.g`, `motion.text`, `motion.tspan`,
+`motion.defs`, `motion.use`, `motion.symbol`, `motion.mask`, `motion.clippath`,
+`motion.lineargradient`, `motion.radialgradient`, `motion.stop`, `motion.filter`,
+`motion.marker`, `motion.pattern`, `motion.image`
+
+**Excluded tags:** `script`, `style`, `link`, `meta`, `title`, `head`, `html`, `body` — these are excluded because they should not be animated.
+
+## Basic usage examples
+
+### Enter animation
+
+```svelte
+<motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.3 }}
+/>
+```
+
+### Hover and tap interactions
+
+```svelte
+<motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.97 }}
+>
+    Press me
+</motion.button>
+```
+
+### Exit animation (requires AnimatePresence)
+
+```svelte
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+    let visible = $state(true)
+</script>
+
+<AnimatePresence mode="wait">
+    {#if visible}
+        <motion.div
+            key="panel"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.25 }}
+        />
+    {/if}
+</AnimatePresence>
+```
+
+<Note>
+  Every direct child of `AnimatePresence` must have a unique `key` prop. This lets Svelte Motion track when an element enters or exits.
+</Note>
+
+### Scroll-triggered animation
+
+```svelte
+<motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4 }}
+>
+    I animate when scrolled into view
+</motion.div>
+```
+
+## SVG animation
+
+SVG elements work the same way as HTML elements. Animate SVG-specific properties like `pathLength`, `fill`, `stroke`, or transform attributes:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<svg width="100" height="100" viewBox="0 0 100 100">
+    <motion.circle
+        cx="50"
+        cy="50"
+        r="40"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, type: 'spring', bounce: 0.4 }}
+    />
+</svg>
+```
+
+```svelte
+<svg width="200" height="4" viewBox="0 0 200 4">
+    <motion.line
+        x1="0" y1="2" x2="200" y2="2"
+        stroke="currentColor"
+        strokeWidth="2"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1, ease: 'easeInOut' }}
+    />
+</svg>
+```
+
+## Accessing the DOM element
+
+Use the `ref` prop to get a reference to the underlying DOM element:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let el: HTMLDivElement | null = $state(null)
+</script>
+
+<motion.div bind:ref={el} animate={{ opacity: 1 }}>
+    Content
+</motion.div>
+```
+
+## Passing standard HTML attributes
+
+Motion components accept all standard HTML attributes. Animation props are intercepted internally and do not appear on the DOM element:
+
+```svelte
+<motion.button
+    type="button"
+    aria-label="Close"
+    class="btn btn-close"
+    onclick={() => close()}
+    whileTap={{ scale: 0.95 }}
+>
+    Close
+</motion.button>
+```

@@ -1,0 +1,346 @@
+---
+title: "MotionProps"
+description: "Complete reference for all props shared by every motion.* component."
+---
+
+Every `motion.*` component accepts all standard HTML/SVG attributes for its underlying element, plus the `MotionProps` interface documented below. Props are grouped by category.
+
+## Import
+
+```typescript
+import type { MotionProps } from '@humanspeak/svelte-motion'
+```
+
+---
+
+## Core animation props
+
+<Accordion title="key, variants, initial, animate, exit, transition">
+
+<ParamField path="key" type="string">
+  Unique identifier used by `AnimatePresence` to track enter/exit state. Required when the element is a direct child of `AnimatePresence`.
+
+  ```svelte
+  <AnimatePresence>
+    {#if show}
+      <motion.div key="modal" exit={{ opacity: 0 }} />
+    {/if}
+  </AnimatePresence>
+  ```
+</ParamField>
+
+<ParamField path="variants" type="Variants">
+  A map of named animation states (`Record<string, DOMKeyframesDefinition | undefined>`). Once defined, `initial`, `animate`, `exit`, and `while*` props can reference variant keys by string instead of inline objects.
+
+  ```svelte
+  <script>
+    const variants = {
+      visible: { opacity: 1, y: 0 },
+      hidden: { opacity: 0, y: 20 }
+    }
+  </script>
+  <motion.div variants={variants} initial="hidden" animate="visible" />
+  ```
+</ParamField>
+
+<ParamField path="initial" type="DOMKeyframesDefinition | string | false | undefined">
+  The starting state before the enter animation runs.
+
+  - Object: `{ opacity: 0, scale: 0.9 }`
+  - String: variant key — `"hidden"`
+  - `false`: Skip the enter animation entirely and render at the `animate` state.
+</ParamField>
+
+<ParamField path="animate" type="DOMKeyframesDefinition | string | undefined">
+  The target state the element animates towards.
+
+  - Object: `{ opacity: 1, scale: 1 }`
+  - String: variant key — `"visible"`
+</ParamField>
+
+<ParamField path="exit" type="DOMKeyframesDefinition | string | { transition?: AnimationOptions } | undefined">
+  The state to animate to when the element is removed from the DOM. Requires wrapping with `AnimatePresence`.
+
+  An inline `transition` key inside the exit object overrides the element-level `transition` for the exit phase only.
+
+  ```svelte
+  <motion.div exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }} />
+  ```
+</ParamField>
+
+<ParamField path="transition" type="AnimationOptions | undefined">
+  Configuration for how the animation plays. See [Transition Options](/api/transition-options) for the full reference.
+
+  ```svelte
+  <motion.div
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.4, ease: 'easeOut' }}
+  />
+  ```
+</ParamField>
+
+</Accordion>
+
+---
+
+## Gesture animation props
+
+<Accordion title="whileHover, whileTap, whileFocus, whileDrag, whileInView">
+
+<ParamField path="whileHover" type="DOMKeyframesDefinition | { transition?: AnimationOptions } | undefined">
+  Animation state applied while the pointer is hovering over the element. Uses true-hover detection (`(hover: hover)` + `(pointer: fine)`).
+
+  ```svelte
+  <motion.button whileHover={{ scale: 1.05 }} />
+  ```
+</ParamField>
+
+<ParamField path="whileTap" type="DOMKeyframesDefinition | undefined">
+  Animation state applied while the element is being pressed. Also triggers on keyboard activation (Enter / Space).
+
+  ```svelte
+  <motion.button whileTap={{ scale: 0.95 }} />
+  ```
+</ParamField>
+
+<ParamField path="whileFocus" type="DOMKeyframesDefinition | { transition?: AnimationOptions } | undefined">
+  Animation state applied while the element has keyboard focus.
+
+  ```svelte
+  <motion.input whileFocus={{ outline: '2px solid blue', scale: 1.02 }} />
+  ```
+</ParamField>
+
+<ParamField path="whileDrag" type="DOMKeyframesDefinition | { transition?: AnimationOptions } | undefined">
+  Animation state applied while the element is being dragged. Reverts to the `animate`/`initial` baseline when dragging ends, restoring only the keys that changed.
+</ParamField>
+
+<ParamField path="whileInView" type="DOMKeyframesDefinition | { transition?: AnimationOptions } | undefined">
+  Animation state applied while the element is inside the viewport. Uses `IntersectionObserver` internally. Reverts when the element leaves the viewport.
+
+  ```svelte
+  <motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+  />
+  ```
+</ParamField>
+
+</Accordion>
+
+---
+
+## Animation lifecycle callbacks
+
+<Accordion title="onAnimationStart, onAnimationComplete">
+
+<ParamField path="onAnimationStart" type="(definition: DOMKeyframesDefinition | undefined) => void">
+  Called immediately before the main `animate` transition starts. Receives the target keyframe definition.
+</ParamField>
+
+<ParamField path="onAnimationComplete" type="(definition: DOMKeyframesDefinition | undefined) => void">
+  Called after the main `animate` transition finishes. Receives the target keyframe definition.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Hover callbacks
+
+<Accordion title="onHoverStart, onHoverEnd">
+
+<ParamField path="onHoverStart" type="() => void">
+  Called when a true hover gesture starts (not emulated touch hover).
+</ParamField>
+
+<ParamField path="onHoverEnd" type="() => void">
+  Called when a true hover gesture ends.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Focus callbacks
+
+<Accordion title="onFocusStart, onFocusEnd">
+
+<ParamField path="onFocusStart" type="() => void">
+  Called when the element receives keyboard focus.
+</ParamField>
+
+<ParamField path="onFocusEnd" type="() => void">
+  Called when the element loses keyboard focus.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Viewport / InView callbacks
+
+<Accordion title="onInViewStart, onInViewEnd">
+
+<ParamField path="onInViewStart" type="() => void">
+  Called when the element enters the viewport.
+</ParamField>
+
+<ParamField path="onInViewEnd" type="() => void">
+  Called when the element leaves the viewport.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Tap callbacks
+
+<Accordion title="onTapStart, onTap, onTapCancel">
+
+<ParamField path="onTapStart" type="() => void">
+  Called when a tap gesture starts (`pointerdown` recognised).
+</ParamField>
+
+<ParamField path="onTap" type="() => void">
+  Called when a tap gesture completes successfully (`pointerup`).
+</ParamField>
+
+<ParamField path="onTapCancel" type="() => void">
+  Called when a tap gesture is cancelled (`pointercancel`).
+</ParamField>
+
+</Accordion>
+
+---
+
+## Drag props
+
+See [Drag Props](/api/drag-props) for the full drag reference. Summary:
+
+<Accordion title="drag, dragConstraints, dragElastic, dragMomentum, dragTransition, dragDirectionLock, dragPropagation, dragSnapToOrigin, dragListener, dragControls">
+
+<ParamField path="drag" type="boolean | 'x' | 'y'">
+  Enable drag. `true` enables both axes; `'x'` or `'y'` locks to a single axis.
+</ParamField>
+
+<ParamField path="dragConstraints" type="{ top?: number; left?: number; right?: number; bottom?: number } | HTMLElement">
+  Constrain dragging to pixel bounds or an element's bounding box.
+</ParamField>
+
+<ParamField path="dragElastic" type="number">
+  Elasticity when dragged beyond constraints. `0` = no elasticity, `1` = full spring-back. Default is `0.5`.
+</ParamField>
+
+<ParamField path="dragMomentum" type="boolean">
+  Continue with inertia momentum after release. Default `true`.
+</ParamField>
+
+<ParamField path="dragTransition" type="DragTransition">
+  Configure the physics of post-drag momentum / bounce. See [Drag Props](/api/drag-props).
+</ParamField>
+
+<ParamField path="dragDirectionLock" type="boolean">
+  Lock to the first detected axis of movement.
+</ParamField>
+
+<ParamField path="dragPropagation" type="boolean">
+  Allow bubbling to parent drag handlers. When `false`, a shared lock prevents nested drags.
+</ParamField>
+
+<ParamField path="dragSnapToOrigin" type="boolean">
+  On release, animate back to the origin position `(0, 0)`.
+</ParamField>
+
+<ParamField path="dragListener" type="boolean">
+  Enable the built-in pointer listener. Set to `false` when using `dragControls` to start drags imperatively.
+</ParamField>
+
+<ParamField path="dragControls" type="DragControls">
+  Imperative controls created via `createDragControls()`. Pass to this prop to initiate drag from an external element.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Drag callbacks
+
+<Accordion title="onDragStart, onDrag, onDragEnd, onDirectionLock, onDragTransitionEnd">
+
+<ParamField path="onDragStart" type="(event: PointerEvent, info: DragInfo) => void">
+  Called when a drag gesture starts.
+</ParamField>
+
+<ParamField path="onDrag" type="(event: PointerEvent, info: DragInfo) => void">
+  Called on each pointer move during a drag.
+</ParamField>
+
+<ParamField path="onDragEnd" type="(event: PointerEvent, info: DragInfo) => void">
+  Called when a drag gesture ends.
+</ParamField>
+
+<ParamField path="onDirectionLock" type="(axis: 'x' | 'y') => void">
+  Called once when drag direction is locked to an axis (requires `dragDirectionLock`).
+</ParamField>
+
+<ParamField path="onDragTransitionEnd" type="() => void">
+  Called when the post-drag inertia/momentum transition finishes.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Layout props
+
+<Accordion title="layout, layoutId">
+
+<ParamField path="layout" type="boolean | 'position'">
+  Enable FLIP layout animations when the element's size or position changes.
+
+  - `true`: Animate translate + scale.
+  - `'position'`: Animate translate only (no scale correction).
+
+  ```svelte
+  <motion.div layout />
+  <motion.div layout="position" />
+  ```
+</ParamField>
+
+<ParamField path="layoutId" type="string">
+  Shared layout animation identifier. Elements across the component tree with a matching `layoutId` animate between each other's positions when one mounts/unmounts.
+</ParamField>
+
+</Accordion>
+
+---
+
+## Element props
+
+<Accordion title="style, class, ref">
+
+<ParamField path="style" type="string">
+  Inline CSS style string. Compatible with `styleString()` for reactive computed styles.
+
+  ```svelte
+  <motion.div style="background: red; border-radius: 8px;" animate={{ opacity: 1 }} />
+  ```
+</ParamField>
+
+<ParamField path="class" type="string">
+  CSS class names applied to the element.
+</ParamField>
+
+<ParamField path="ref" type="HTMLElement | null">
+  Ref binding to the underlying DOM element.
+
+  ```svelte
+  <script>
+    let el = $state(null)
+  </script>
+  <motion.div bind:ref={el} animate={{ opacity: 1 }} />
+  ```
+</ParamField>
+
+</Accordion>

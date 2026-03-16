@@ -1,0 +1,160 @@
+---
+title: "Focus"
+description: "Animate elements when they receive keyboard focus using `whileFocus`. The primary tool for building accessible animated focus indicators."
+---
+
+## whileFocus
+
+The `whileFocus` prop animates a motion component when it receives keyboard focus. The animation triggers on the `focus` event and reverses on `blur`. This is the recommended way to build custom, animated focus rings that meet accessibility requirements.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button
+    whileFocus={{ scale: 1.05, outline: '2px solid #0099ff' }}
+>
+    Focus me
+</motion.button>
+```
+
+## Use case: animated focus indicators
+
+Browsers provide a default focus ring, but it can be hard to style consistently. `whileFocus` lets you build a custom focus indicator that animates in smoothly:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- Custom animated ring: appears on focus, disappears on blur -->
+<motion.button
+    whileFocus={{
+        boxShadow: '0 0 0 3px #0099ff',
+        outline: 'none',
+        transition: { duration: 0.15 }
+    }}
+    style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background: white;
+        cursor: pointer;
+        outline: none;
+    "
+>
+    Keyboard-friendly button
+</motion.button>
+```
+
+<Note>
+  Set `outline: none` on the element itself to suppress the browser default, then use `whileFocus` to render your own focus indicator. Always ensure the animated indicator has sufficient color contrast (WCAG AA: 3:1 against adjacent colors).
+</Note>
+
+## Inline transition override
+
+Embed `transition` inside `whileFocus` to control the focus-in timing independently from the blur-out timing:
+
+```svelte
+<motion.input
+    whileFocus={{
+        borderColor: '#0099ff',
+        boxShadow: '0 0 0 2px rgba(0, 153, 255, 0.25)',
+        transition: { duration: 0.1 }
+    }}
+    transition={{ duration: 0.25 }}
+    style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc;"
+/>
+```
+
+## Callbacks
+
+| Callback | Fires when |
+|----------|------------|
+| `onFocusStart` | The element receives focus |
+| `onFocusEnd` | The element loses focus |
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let focused = $state(false)
+</script>
+
+<motion.input
+    whileFocus={{ borderColor: '#0099ff' }}
+    onFocusStart={() => (focused = true)}
+    onFocusEnd={() => (focused = false)}
+    placeholder={focused ? 'Typing...' : 'Click to focus'}
+    style="padding: 8px; border: 2px solid #ccc; border-radius: 6px;"
+/>
+```
+
+## Baseline restoration
+
+When focus ends, the library restores only the properties that `whileFocus` changed. The restoration target priority is:
+
+1. The corresponding value in `animate`
+2. The corresponding value in `initial`
+3. Neutral transform defaults (`scale: 1`, etc.)
+4. Computed CSS value (from `getComputedStyle`)
+5. Empty string fallback (clears the inline style)
+
+## Combining with whileHover and whileTap
+
+All gesture states compose. A fully accessible interactive element might use all three:
+
+```svelte
+<motion.button
+    whileHover={{ scale: 1.04 }}
+    whileFocus={{
+        boxShadow: '0 0 0 3px #0099ff',
+        outline: 'none'
+    }}
+    whileTap={{ scale: 0.96 }}
+    transition={{ duration: 0.15 }}
+    style="
+        padding: 10px 20px;
+        background: #0057b8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        outline: none;
+    "
+>
+    Fully accessible button
+</motion.button>
+```
+
+## Form field example
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<label>
+    <span>Email</span>
+    <motion.input
+        type="email"
+        whileFocus={{
+            borderColor: '#0099ff',
+            boxShadow: '0 0 0 3px rgba(0, 153, 255, 0.2)',
+            transition: { duration: 0.12 }
+        }}
+        transition={{ duration: 0.2 }}
+        style="
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        "
+        placeholder="you@example.com"
+    />
+</label>
+```

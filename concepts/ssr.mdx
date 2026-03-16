@@ -1,0 +1,135 @@
+---
+title: "SSR and hydration"
+description: "How Svelte Motion renders initial visual state on the server and hydrates without flicker."
+---
+
+## Overview
+
+Svelte Motion is designed to render correctly on the server and hydrate cleanly in the browser. The key principle: the initial visual state of every motion component is deterministic at render time and does not depend on JavaScript being available.
+
+## How initial state is determined
+
+When a motion component renders server-side, Svelte Motion applies the `initial` prop as inline styles to the element:
+
+```svelte
+<!-- Server renders the element with opacity: 0 -->
+<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} />
+```
+
+On the server, the output HTML will carry the `initial` styles so the element is visually in the correct starting state before any JavaScript runs. In the browser, after hydration, the animation plays from that state to the `animate` target.
+
+### When initial is omitted
+
+If `initial` is not provided, Svelte Motion falls back to the first keyframe of `animate` as the starting visual state:
+
+```svelte
+<!-- Server renders with opacity: 1 (the animate value) -->
+<!-- No animation plays on mount -->
+<motion.div animate={{ opacity: 1 }} />
+```
+
+This means the element appears in its final animated state immediately, which is appropriate for elements that should not animate on first load.
+
+## Skipping the enter animation
+
+Set `initial={false}` to explicitly disable the enter animation. The element renders immediately at the `animate` state on both the server and the client:
+
+```svelte
+<!-- Renders at full opacity immediately, no enter animation -->
+<motion.div initial={false} animate={{ opacity: 1 }} />
+```
+
+This is the recommended pattern when:
+- You only want exit animations via `AnimatePresence`, not enter animations.
+- The component is conditionally rendered and re-mounting should not re-trigger an enter animation.
+- You want to skip animations on the initial page load for performance.
+
+## Hydration and avoiding flicker
+
+The hydration path in Svelte Motion is designed to avoid visual flicker. Because the server renders the `initial` styles as inline styles, the browser sees a consistent DOM before and after JavaScript initializes. The animation begins only after the component has been mounted and all reactive state is ready.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!--
+  Server: renders with opacity=0, y=8 (from initial)
+  Client: after mount, animates to opacity=1, y=0
+  Result: no flash of fully-visible content before the animation starts
+-->
+<motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+/>
+```
+
+## SvelteKit-specific notes
+
+Svelte Motion works with SvelteKit out of the box. No special adapter configuration or plugin is required.
+
+**Server routes and load functions:** Motion components are purely presentational and do not affect data loading. Place animation logic in `+page.svelte` or `+layout.svelte` as you normally would.
+
+**Streaming:** When using SvelteKit's streaming SSR, motion components in streamed sections will follow the same rule — `initial` styles are inlined at render time.
+
+**`initial={false}` at the layout level:** If you have a layout that wraps all pages and you don't want page-transition enter animations on the initial server-rendered load, set `initial={false}` on the outermost motion component or use `MotionConfig` with a conditional:
+
+```svelte
+<!-- +layout.svelte -->
+<script lang="ts">
+    import { MotionConfig, motion } from '@humanspeak/svelte-motion'
+    import { browser } from '$app/environment'
+</script>
+
+<!--
+  On first server render, skip enter animations.
+  After navigation (client-side), play them normally.
+-->
+<MotionConfig transition={{ duration: 0.3 }}>
+    <motion.div
+        initial={browser ? { opacity: 0 } : false}
+        animate={{ opacity: 1 }}
+    >
+        {@render children()}
+    </motion.div>
+</MotionConfig>
+```
+
+<Note>
+  The `AnimatePresence` exit animation always runs client-side only, because exit animations fire when a component is removed from the DOM — which only happens after hydration. There is no server-side equivalent of an exit animation.
+</Note>
+
+## AnimatePresence and SSR
+
+When `AnimatePresence` wraps a conditionally rendered block, the server renders whatever is currently truthy inside the `{#if}` block — just like normal Svelte. On the client, `AnimatePresence` takes over and plays enter and exit animations as conditions change.
+
+```svelte
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    // If show is true on the server, the element is server-rendered.
+    // If show is false on the server, nothing is rendered.
+    let show = $state(true)
+</script>
+
+<AnimatePresence>
+    {#if show}
+        <motion.div
+            key="box"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+        />
+    {/if}
+</AnimatePresence>
+```
+
+## Summary
+
+| Scenario | Server render | Client behaviour |
+|----------|---------------|------------------|
+| `initial` provided | Inline styles from `initial` | Animates from `initial` to `animate` |
+| `initial` omitted | Inline styles from first `animate` keyframe | No enter animation |
+| `initial={false}` | Inline styles from `animate` | No enter animation |
+| `exit` provided | Normal DOM render | Exit animation on unmount (client only) |

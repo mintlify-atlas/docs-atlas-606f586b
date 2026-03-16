@@ -1,0 +1,141 @@
+---
+title: "In-view"
+description: "Animate elements as they enter the viewport using `whileInView`. Powered by the browser's native IntersectionObserver."
+---
+
+## whileInView
+
+The `whileInView` prop triggers an animation when the element enters the browser's viewport. When the element scrolls out of view, it animates back to its baseline state.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+/>
+```
+
+<Note>
+  `whileInView` is a gesture state, not a one-shot trigger. By default, the element animates in when it enters the viewport and animates out (back to baseline) when it leaves. If you want a one-shot animation that fires once and stays, use `animate` driven by a state variable updated in `onInViewStart`.
+</Note>
+
+## How it works
+
+Internally, `whileInView` uses the browser's native `IntersectionObserver` with `threshold: 0`. This means the animation fires as soon as **any pixel** of the element is visible in the viewport. The observer also fires immediately on mount if the element is already in view.
+
+## Inline transition override
+
+Embed a `transition` key inside `whileInView` to control the in-view animation timing independently:
+
+```svelte
+<motion.section
+    initial={{ opacity: 0, scale: 0.95 }}
+    whileInView={{
+        opacity: 1,
+        scale: 1,
+        transition: { duration: 0.4, ease: 'easeOut' }
+    }}
+/>
+```
+
+The baseline restore (on leaving the viewport) uses the component-level `transition` prop.
+
+## Callbacks
+
+| Callback | Fires when |
+|----------|------------|
+| `onInViewStart` | The element enters the viewport |
+| `onInViewEnd` | The element leaves the viewport |
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let count = $state(0)
+</script>
+
+<motion.div
+    whileInView={{ opacity: 1, y: 0 }}
+    initial={{ opacity: 0, y: 20 }}
+    onInViewStart={() => count++}
+    onInViewEnd={() => console.log('left viewport')}
+>
+    Entered {count} time{count === 1 ? '' : 's'}
+</motion.div>
+```
+
+## Staggered list animation
+
+Combine `whileInView` with `transition.delay` to stagger list items as they scroll into view:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    const items = ['Feature one', 'Feature two', 'Feature three', 'Feature four']
+</script>
+
+<ul style="list-style: none; padding: 0;">
+    {#each items as item, i}
+        <motion.li
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1 }}
+            style="padding: 12px 0; border-bottom: 1px solid #eee;"
+        >
+            {item}
+        </motion.li>
+    {/each}
+</ul>
+```
+
+## One-shot animation pattern
+
+If you want the animation to fire once and then stay in the `whileInView` state (not reset when leaving the viewport), track the state manually:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let hasEntered = $state(false)
+</script>
+
+<motion.div
+    initial={{ opacity: 0, y: 30 }}
+    animate={hasEntered ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+    onInViewStart={() => (hasEntered = true)}
+    transition={{ duration: 0.5 }}
+/>
+```
+
+## Current limitations
+
+<Warning>
+  The current `whileInView` implementation does not support Framer Motion's `viewport` options:
+
+  - No `root` (custom scroll container)
+  - No `margin` (rootMargin offset)
+  - No `amount` (threshold for partial visibility)
+  - No `once` (fire-once behavior)
+
+  The observer always uses `threshold: 0` against the default viewport. Use the one-shot pattern above to approximate `once: true`.
+</Warning>
+
+## Combining with `initial` and `animate`
+
+`whileInView` composes with `initial` and `animate`. The element starts at `initial`, reaches `animate` on mount, and then layers the `whileInView` state on top when in viewport:
+
+```svelte
+<motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 0.4 }}
+    whileInView={{ opacity: 1 }}
+    transition={{ duration: 0.4 }}
+>
+    Dimmed normally, full opacity in view
+</motion.div>
+```

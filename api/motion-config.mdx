@@ -1,0 +1,94 @@
+---
+title: "MotionConfig"
+description: "Provide default animation configuration to all descendant motion components."
+---
+
+`MotionConfig` is a context provider that supplies default animation configuration to all `motion.*` components nested inside it. Currently, only the `transition` prop is supported.
+
+## Import
+
+```typescript
+import { MotionConfig } from '@humanspeak/svelte-motion'
+```
+
+## Props
+
+<ParamField path="transition" type="MotionTransition">
+  Default [`AnimationOptions`](https://motion.dev/docs/animate) applied to all descendant motion elements. Per-element `transition` props are merged on top of this default, with the element-level props taking precedence.
+
+  ```svelte
+  <MotionConfig transition={{ duration: 0.4, ease: 'easeInOut' }}>
+    <!-- All children use 0.4s easeInOut by default -->
+    <motion.div animate={{ opacity: 1 }} />
+  </MotionConfig>
+  ```
+</ParamField>
+
+<ParamField path="children" type="Snippet">
+  Slotted content. All `motion.*` components within this subtree will receive the configured defaults.
+</ParamField>
+
+<Warning>
+  `MotionConfig` currently only supports the `transition` prop. Other Framer Motion `MotionConfig` options such as `reducedMotion`, `features`, and `transformPagePoint` are not yet implemented.
+</Warning>
+
+## Behaviour
+
+- The default `transition` from `MotionConfig` is merged with element-level `transition` props.
+- Element-level props always take precedence over the `MotionConfig` default.
+- Nesting multiple `MotionConfig` components is supported; the nearest ancestor wins.
+
+## Examples
+
+### Shared transition for a section
+
+```svelte
+<script>
+  import { MotionConfig, motion } from '@humanspeak/svelte-motion'
+</script>
+
+<MotionConfig transition={{ duration: 0.4 }}>
+  <motion.div animate={{ scale: 1.05 }} />
+  <motion.div animate={{ opacity: 0.5 }} />
+  <!-- Both use duration: 0.4 -->
+</MotionConfig>
+```
+
+### Spring defaults
+
+```svelte
+<script>
+  import { MotionConfig, motion } from '@humanspeak/svelte-motion'
+</script>
+
+<MotionConfig
+  transition={{
+    type: 'spring',
+    stiffness: 200,
+    damping: 20
+  }}
+>
+  <motion.div animate={{ x: 100 }} />
+  <motion.div animate={{ y: 50 }} />
+</MotionConfig>
+```
+
+### Element override
+
+```svelte
+<script>
+  import { MotionConfig, motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- Default: 0.4s -->
+<MotionConfig transition={{ duration: 0.4 }}>
+  <!-- This element overrides with 0.1s -->
+  <motion.div
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.1 }}
+  />
+
+  <!-- This element uses the 0.4s default -->
+  <motion.div animate={{ opacity: 1 }} />
+</MotionConfig>
+```

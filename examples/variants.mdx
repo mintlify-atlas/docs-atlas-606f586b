@@ -1,0 +1,253 @@
+---
+title: Variants
+description: Named animation states, parent-to-child propagation, and staggered list reveal examples.
+---
+
+Variants let you define named animation states and reference them by string key. They are most powerful when combined with propagation — a parent that changes its `animate` string automatically triggers matching states in all descendant motion components.
+
+## Basic toggle
+
+Define an `open` and `closed` state, then drive them with a boolean:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    let isOpen = $state(false)
+
+    const variants: Variants = {
+        open: {
+            opacity: 1,
+            scale: 1,
+            rotate: 0
+        },
+        closed: {
+            opacity: 0.6,
+            scale: 0.8,
+            rotate: -5
+        }
+    }
+</script>
+
+<motion.button
+    {variants}
+    initial="closed"
+    animate={isOpen ? 'open' : 'closed'}
+    transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 20
+    }}
+    onclick={() => (isOpen = !isOpen)}
+>
+    {isOpen ? 'Open' : 'Closed'}
+</motion.button>
+```
+
+## Multi-state variants
+
+Variants are not limited to two states. Use any number of named keys:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    let status = $state<'idle' | 'loading' | 'success'>('idle')
+
+    const statusVariants: Variants = {
+        idle:    { scale: 1,    backgroundColor: '#6b7280' },
+        loading: { scale: 1.05, backgroundColor: '#3b82f6' },
+        success: { scale: 1,    backgroundColor: '#22c55e' }
+    }
+</script>
+
+<motion.button
+    variants={statusVariants}
+    animate={status}
+    onclick={() => {
+        status = 'loading'
+        setTimeout(() => { status = 'success' }, 1000)
+    }}
+>
+    {status}
+</motion.button>
+```
+
+## Reusing variants across elements
+
+The same `Variants` object can be shared across multiple motion components:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    const fadeVariants: Variants = {
+        visible: { opacity: 1 },
+        hidden:  { opacity: 0 }
+    }
+</script>
+
+<motion.div variants={fadeVariants} animate="visible" />
+<motion.p   variants={fadeVariants} animate="visible" />
+<motion.span variants={fadeVariants} animate="visible" />
+```
+
+## Parent-to-child propagation
+
+When a parent sets `animate`, children that define matching variant keys inherit the state automatically — no need to pass `animate` to each child:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    let isVisible = $state(false)
+
+    const containerVariants: Variants = {
+        visible: { opacity: 1 },
+        hidden:  { opacity: 0 }
+    }
+
+    const itemVariants: Variants = {
+        visible: { opacity: 1, x: 0 },
+        hidden:  { opacity: 0, x: -20 }
+    }
+
+    const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4']
+</script>
+
+<button onclick={() => (isVisible = !isVisible)}>
+    {isVisible ? 'Hide' : 'Show'} Items
+</button>
+
+<motion.ul
+    variants={containerVariants}
+    initial="hidden"
+    animate={isVisible ? 'visible' : 'hidden'}
+>
+    {#each items as item, i (i)}
+        <motion.li
+            variants={itemVariants}
+            transition={{
+                type: 'spring',
+                stiffness: 300,
+                damping: 24,
+                delay: i * 0.1
+            }}
+        >
+            {item}
+        </motion.li>
+    {/each}
+</motion.ul>
+```
+
+<Note>
+  Children do not need `initial` or `animate` props when their parent has them. The variant state propagates through the component tree via context.
+</Note>
+
+## Stagger with index delay
+
+Stagger children by adding an index-based `delay` to each item's `transition`:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    const itemVariants: Variants = {
+        visible: { opacity: 1, y: 0 },
+        hidden:  { opacity: 0, y: 20 }
+    }
+
+    const items = ['First', 'Second', 'Third', 'Fourth', 'Fifth']
+</script>
+
+{#each items as item, i}
+    <motion.div
+        variants={itemVariants}
+        transition={{ delay: i * 0.1 }}
+    >
+        {item}
+    </motion.div>
+{/each}
+```
+
+## Complex orchestration
+
+Multiple variant definitions can coordinate across a deeply nested tree. Each element resolves its own variant key independently:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    let isOpen = $state(false)
+
+    const stackVariants: Variants = {
+        open:   { y: 20,  scale: 0.9 },
+        closed: { y: 0,   scale: 1   }
+    }
+
+    const headerVariants: Variants = {
+        open:   { opacity: 1, y: 0 },
+        closed: { opacity: 0, y: 60 }
+    }
+
+    function getItemVariants(index: number): Variants {
+        return {
+            open:   { y: 0,           opacity: 1 },
+            closed: { y: -index * 68, opacity: 1 - index * 0.4 }
+        }
+    }
+
+    const notifications = ['New message', 'Payment received', 'Login alert']
+</script>
+
+<motion.div
+    variants={stackVariants}
+    animate={isOpen ? 'open' : 'closed'}
+    onclick={() => (isOpen = !isOpen)}
+>
+    <!-- Header inherits "open" or "closed" from parent -->
+    <motion.div variants={headerVariants}>
+        <h3>Notifications</h3>
+    </motion.div>
+
+    {#each notifications as note, i}
+        <motion.div
+            variants={getItemVariants(i)}
+            transition={{ delay: i * 0.04 }}
+        >
+            {note}
+        </motion.div>
+    {/each}
+</motion.div>
+```
+
+## Type safety
+
+Import the `Variants` type for full TypeScript support:
+
+```typescript
+import type { Variants } from '@humanspeak/svelte-motion'
+
+const variants: Variants = {
+    visible: { opacity: 1, x: 0 },
+    hidden:  { opacity: 0, x: -100 }
+}
+```
+
+## API reference
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `variants` | `Variants` | Named animation state map |
+| `initial` | `string` | Initial variant key |
+| `animate` | `string` | Active variant key |
+| `exit` | `string` | Exit variant key (inside `AnimatePresence`) |
+
+```typescript
+type Variants = Record<string, DOMKeyframesDefinition | undefined>
+```
+
+## Related
+
+- [Core Concepts: Variants](/concepts/variants) — full variants reference
+- [AnimatePresence examples](/examples/animate-presence) — exit animations with variant keys

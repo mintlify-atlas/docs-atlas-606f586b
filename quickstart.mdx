@@ -1,80 +1,129 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Animate your first Svelte component in under five minutes."
 ---
 
-## Get started in three steps
+This guide walks you from installation to a working exit animation. Each step builds on the last.
 
-Get your documentation site running locally and make your first customization.
+<Steps>
+  <Step title="Install the package">
+    Add `@humanspeak/svelte-motion` to your project:
 
-### Step 1: Set up your local environment
+    <CodeGroup>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash npm
+    npm install @humanspeak/svelte-motion
+    ```
 
-### Step 2: Deploy your changes
+    ```bash yarn
+    yarn add @humanspeak/svelte-motion
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash pnpm
+    pnpm add @humanspeak/svelte-motion
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    </CodeGroup>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    <Note>
+      Svelte 5 or later is required as a peer dependency. Svelte Motion uses runes (`$state`, `$props`) internally.
+    </Note>
+  </Step>
 
-### Step 3: Go live
+  <Step title="Write your first animation">
+    Import `motion` and add `initial` and `animate` props to any element:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ```svelte
+    <script lang="ts">
+        import { motion } from '@humanspeak/svelte-motion'
+    </script>
+
+    <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        class="card"
+    >
+        Hello, animation!
+    </motion.div>
+    ```
+
+    When the component mounts, it animates from the `initial` state to the `animate` state over 250 ms.
+  </Step>
+
+  <Step title="Add hover and tap interactions">
+    Use `whileHover` and `whileTap` to animate on gesture:
+
+    ```svelte
+    <script lang="ts">
+        import { motion } from '@humanspeak/svelte-motion'
+    </script>
+
+    <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        whileHover={{ scale: 1.05, transition: { duration: 0.12 } }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ duration: 0.4 }}
+    >
+        Click me
+    </motion.button>
+    ```
+
+    <Tip>
+      `whileHover` uses true-hover gating via `(hover: hover) and (pointer: fine)`, so it won't fire on touch devices where hover events are emulated.
+    </Tip>
+  </Step>
+
+  <Step title="Animate on enter and exit with AnimatePresence">
+    Wrap conditionally rendered components in `AnimatePresence` to play an `exit` animation before the element is removed from the DOM:
+
+    ```svelte
+    <script lang="ts">
+        import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+        let show = $state(true)
+    </script>
+
+    <AnimatePresence mode="wait">
+        {#if show}
+            <motion.div
+                key="card"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                class="card"
+            />
+        {/if}
+    </AnimatePresence>
+
+    <button onclick={() => (show = !show)}>Toggle</button>
+    ```
+
+    Every direct child of `AnimatePresence` requires a unique `key` prop so the library can track enter and exit state.
+
+    | `mode` | Behaviour |
+    |--------|-----------|
+    | `sync` (default) | Enter and exit animations run simultaneously. |
+    | `wait` | Exit completes before the entering element mounts. |
+    | `popLayout` | Like `sync`, but exiting elements are removed from layout flow immediately. |
+  </Step>
+</Steps>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Motion components" icon="box" href="/concepts/motion-components">
+    Learn about every supported HTML and SVG element.
+  </Card>
+  <Card title="Transitions" icon="sliders" href="/concepts/transitions">
+    Configure duration, easing, and spring physics.
+  </Card>
+  <Card title="Variants" icon="layers" href="/concepts/variants">
+    Define named animation states and propagate them to children.
+  </Card>
+  <Card title="SSR" icon="server" href="/concepts/ssr">
+    Understand how initial state is rendered server-side.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

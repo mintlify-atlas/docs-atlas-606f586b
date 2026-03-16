@@ -1,0 +1,245 @@
+---
+title: "Drag Props"
+description: "Complete reference for drag gesture props on motion components."
+---
+
+Svelte Motion supports pointer-based drag gestures on any `motion.*` element. Enable dragging with the `drag` prop and refine the behaviour with the options below.
+
+## Import
+
+```typescript
+import type {
+  DragAxis,
+  DragConstraints,
+  DragControls,
+  DragInfo,
+  DragTransition
+} from '@humanspeak/svelte-motion'
+```
+
+---
+
+## Enabling drag
+
+<ParamField path="drag" type="boolean | 'x' | 'y'">
+  Enable drag gestures.
+
+  - `true` — allow dragging on both axes.
+  - `'x'` — restrict movement to the horizontal axis.
+  - `'y'` — restrict movement to the vertical axis.
+
+  ```svelte
+  <motion.div drag />
+  <motion.div drag="x" />
+  <motion.div drag="y" />
+  ```
+</ParamField>
+
+<ParamField path="whileDrag" type="DOMKeyframesDefinition | { transition?: AnimationOptions } | undefined">
+  Animation state applied while the element is being dragged. Reverts to the element's `animate`/`initial` baseline when dragging stops, restoring only the keys that were changed.
+
+  ```svelte
+  <motion.div drag whileDrag={{ scale: 1.05, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} />
+  ```
+</ParamField>
+
+---
+
+## Constraints
+
+<ParamField path="dragConstraints" type="{ top?: number; left?: number; right?: number; bottom?: number } | HTMLElement">
+  Constrain dragging to a bounded area.
+
+  - **Pixel bounds**: object with optional `top`, `left`, `right`, `bottom` in pixels relative to the element's origin.
+  - **Element ref**: the draggable element is constrained within the bounding box of this `HTMLElement`.
+
+  ```svelte
+  <motion.div
+    drag
+    dragConstraints={{ top: -50, bottom: 50, left: -100, right: 100 }}
+  />
+  ```
+</ParamField>
+
+<ParamField path="dragElastic" type="number">
+  How elastic the boundary is when the element is dragged beyond its constraints.
+
+  - `0` — hard stop, no overshoot.
+  - `1` — full elastic, the element follows the pointer freely beyond bounds.
+  - Default: `0.5`.
+
+  ```svelte
+  <motion.div drag dragConstraints={{ left: 0, right: 200 }} dragElastic={0.1} />
+  ```
+</ParamField>
+
+---
+
+## Momentum
+
+<ParamField path="dragMomentum" type="boolean">
+  Continue moving with inertia after the pointer is released. Default `true`.
+
+  ```svelte
+  <motion.div drag dragMomentum={false} />
+  ```
+</ParamField>
+
+<ParamField path="dragTransition" type="DragTransition">
+  Configure the physics of the post-release inertia or bounce-back animation.
+
+  <Expandable title="DragTransition properties">
+    <ParamField path="bounceStiffness" type="number">
+      Spring stiffness used when bouncing back from constraints.
+    </ParamField>
+    <ParamField path="bounceDamping" type="number">
+      Damping applied to the bounce-back spring.
+    </ParamField>
+    <ParamField path="power" type="number">
+      Scales the momentum from velocity. Higher = greater distance traveled.
+    </ParamField>
+    <ParamField path="timeConstant" type="number">
+      Decay time constant in milliseconds. Higher = slower settling.
+    </ParamField>
+    <ParamField path="restDelta" type="number">
+      Position delta below which the animation is considered at rest.
+    </ParamField>
+    <ParamField path="restSpeed" type="number">
+      Speed below which the animation is considered at rest.
+    </ParamField>
+    <ParamField path="min" type="number">
+      Lower bound for inertia animations.
+    </ParamField>
+    <ParamField path="max" type="number">
+      Upper bound for inertia animations.
+    </ParamField>
+  </Expandable>
+
+  ```svelte
+  <motion.div
+    drag
+    dragTransition={{ bounceStiffness: 300, bounceDamping: 20 }}
+  />
+  ```
+</ParamField>
+
+---
+
+## Gesture behaviour
+
+<ParamField path="dragDirectionLock" type="boolean">
+  After the first significant pointer movement, lock to the detected axis and ignore movement on the perpendicular axis.
+
+  ```svelte
+  <motion.div drag dragDirectionLock />
+  ```
+</ParamField>
+
+<ParamField path="dragPropagation" type="boolean">
+  Allow drag events to bubble up to parent drag handlers. When `false` (default), a shared lock prevents competing nested drags.
+</ParamField>
+
+<ParamField path="dragSnapToOrigin" type="boolean">
+  When the pointer is released, animate the element back to its original position `(0, 0)`.
+
+  ```svelte
+  <motion.div drag dragSnapToOrigin />
+  ```
+</ParamField>
+
+<ParamField path="dragListener" type="boolean">
+  When `false`, the element does not attach its own `pointerdown` listener. Use this when you want to start a drag imperatively via `dragControls`. Default: `true`.
+</ParamField>
+
+---
+
+## Imperative controls
+
+<ParamField path="dragControls" type="DragControls">
+  Pass a `DragControls` object (from `createDragControls()`) to start drags programmatically from an external element.
+
+  See [Hooks](/api/hooks#createDragControls) for the `createDragControls` reference.
+
+  ```svelte
+  <script>
+    import { motion, createDragControls } from '@humanspeak/svelte-motion'
+    const controls = createDragControls()
+  </script>
+
+  <button onpointerdown={(e) => controls.start(e)}>Drag handle</button>
+  <motion.div
+    drag="x"
+    dragControls={controls}
+    dragListener={false}
+  />
+  ```
+</ParamField>
+
+---
+
+## Drag callbacks
+
+<ParamField path="onDragStart" type="(event: PointerEvent, info: DragInfo) => void">
+  Called when a drag gesture begins.
+</ParamField>
+
+<ParamField path="onDrag" type="(event: PointerEvent, info: DragInfo) => void">
+  Called on every pointer move while dragging.
+</ParamField>
+
+<ParamField path="onDragEnd" type="(event: PointerEvent, info: DragInfo) => void">
+  Called when a drag gesture ends.
+</ParamField>
+
+<ParamField path="onDirectionLock" type="(axis: 'x' | 'y') => void">
+  Called once when drag direction is locked (requires `dragDirectionLock: true`).
+</ParamField>
+
+<ParamField path="onDragTransitionEnd" type="() => void">
+  Called when the post-drag inertia or snap-to-origin animation finishes.
+</ParamField>
+
+### DragInfo shape
+
+All drag callbacks receive `event: PointerEvent` and `info: DragInfo`:
+
+```typescript
+type DragInfo = {
+  point: { x: number; y: number }     // Pointer position in page coordinates
+  delta: { x: number; y: number }     // Change from previous event
+  offset: { x: number; y: number }    // Total distance from drag start
+  velocity: { x: number; y: number }  // Current velocity in px/s
+}
+```
+
+---
+
+## Full example
+
+```svelte
+<script>
+  import { motion, createDragControls } from '@humanspeak/svelte-motion'
+
+  const controls = createDragControls()
+
+  function handleDragEnd(event, info) {
+    console.log('Velocity:', info.velocity)
+  }
+</script>
+
+<button onpointerdown={(e) => controls.start(e, { snapToCursor: true })}>
+  Start drag
+</button>
+
+<motion.div
+  drag="x"
+  dragControls={controls}
+  dragListener={false}
+  dragConstraints={{ left: -150, right: 150 }}
+  dragElastic={0.2}
+  dragMomentum
+  dragTransition={{ bounceStiffness: 300, bounceDamping: 25 }}
+  whileDrag={{ scale: 1.05 }}
+  onDragEnd={handleDragEnd}
+/>
+```

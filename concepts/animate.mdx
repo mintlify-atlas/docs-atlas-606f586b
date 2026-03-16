@@ -1,0 +1,201 @@
+---
+title: "The animate prop"
+description: "Declaratively animate any CSS property, transform, or SVG attribute by changing the animate prop."
+---
+
+## Overview
+
+The `animate` prop defines where a motion component should animate to. When the value changes, the component smoothly transitions to the new state. When the component first mounts, it animates from `initial` (or from the current DOM state if `initial` is not set) to the `animate` value.
+
+```svelte
+<motion.div animate={{ opacity: 1, scale: 1 }} />
+```
+
+## Animatable properties
+
+You can animate any CSS property accepted by the browser, plus several shorthand transform values:
+
+**Transforms (shorthand):**
+- `x`, `y`, `z` — translation in pixels
+- `scale`, `scaleX`, `scaleY` — scale factor
+- `rotate`, `rotateX`, `rotateY`, `rotateZ` — rotation in degrees
+- `skewX`, `skewY` — skew in degrees
+
+**CSS properties:**
+- `opacity`, `color`, `background`, `backgroundColor`
+- `width`, `height`, `borderRadius`
+- `boxShadow`, `filter`, `transform`
+- Any other animatable CSS property
+
+**SVG attributes:**
+- `pathLength`, `pathOffset`, `pathSpacing`
+- `fill`, `stroke`, `strokeWidth`
+
+```svelte
+<motion.div
+    animate={{
+        x: 100,
+        opacity: 1,
+        scale: 1.1,
+        rotate: 45,
+        borderRadius: '50%',
+        backgroundColor: '#0099ff'
+    }}
+/>
+```
+
+## Object syntax
+
+Pass an object of CSS properties and values. Numeric values for transform shorthands are unitless:
+
+```svelte
+<!-- x=100 means 100px, rotate=45 means 45deg -->
+<motion.div
+    initial={{ x: 0, rotate: 0 }}
+    animate={{ x: 100, rotate: 45 }}
+/>
+```
+
+For CSS properties that require units, pass a string:
+
+```svelte
+<motion.div animate={{ width: '100%', borderRadius: '8px' }} />
+```
+
+## Variant key strings
+
+Instead of an inline object, you can reference a named state from the `variants` prop:
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    const variants: Variants = {
+        hidden: { opacity: 0, y: 8 },
+        visible: { opacity: 1, y: 0 }
+    }
+
+    let isVisible = $state(false)
+</script>
+
+<motion.div
+    variants={variants}
+    initial="hidden"
+    animate={isVisible ? 'visible' : 'hidden'}
+/>
+```
+
+This keeps animation definitions separate from the template logic and enables [variant propagation to children](/concepts/variants).
+
+## How initial interacts with animate
+
+On mount, the component reads `initial` to determine the starting state, then animates to `animate`.
+
+```svelte
+<!-- Fade in from 0 opacity -->
+<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} />
+
+<!-- Scale in from nothing -->
+<motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} />
+
+<!-- Slide in from below -->
+<motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} />
+```
+
+When `initial` is not set, Svelte Motion reads the current DOM values as the starting point.
+
+## Skipping the enter animation
+
+Set `initial={false}` to skip the enter animation entirely. The component renders immediately at the `animate` state:
+
+```svelte
+<!-- No animation on first render -->
+<motion.div initial={false} animate={{ opacity: 1, scale: 1 }} />
+```
+
+This is useful when you want exit animations via `AnimatePresence` but don't want an enter animation on the initial page load.
+
+## Animating on state change
+
+When the `animate` prop value changes, Svelte Motion automatically transitions to the new state:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let isOpen = $state(false)
+</script>
+
+<!-- Animates between closed and open on each click -->
+<motion.div
+    animate={{ height: isOpen ? 200 : 60, opacity: isOpen ? 1 : 0.5 }}
+    transition={{ duration: 0.3 }}
+/>
+
+<button onclick={() => (isOpen = !isOpen)}>Toggle</button>
+```
+
+## Lifecycle callbacks
+
+Use `onAnimationStart` and `onAnimationComplete` to run code around the main `animate` transition:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+    import type { DOMKeyframesDefinition } from 'motion'
+
+    function handleStart(definition: DOMKeyframesDefinition | undefined) {
+        console.log('Animation started', definition)
+    }
+
+    function handleComplete(definition: DOMKeyframesDefinition | undefined) {
+        console.log('Animation completed', definition)
+    }
+</script>
+
+<motion.div
+    animate={{ opacity: 1 }}
+    onAnimationStart={handleStart}
+    onAnimationComplete={handleComplete}
+/>
+```
+
+<Note>
+  `onAnimationStart` and `onAnimationComplete` fire for the main `animate` transition only, not for gesture animations like `whileHover` or `whileTap`.
+</Note>
+
+## Inline transition within animate
+
+You can embed a `transition` directly inside the `animate` object. This overrides the top-level `transition` prop:
+
+```svelte
+<motion.div
+    animate={{
+        scale: 1.1,
+        transition: { duration: 0.6, ease: 'easeOut' }
+    }}
+/>
+```
+
+## Gesture animation props
+
+Related props that animate on user interaction follow the same object syntax as `animate`:
+
+| Prop | When it animates |
+|------|------------------|
+| `whileHover` | While pointer hovers the element (true hover only) |
+| `whileTap` | While the element is pressed |
+| `whileFocus` | While the element has keyboard focus |
+| `whileInView` | While the element is in the viewport |
+| `whileDrag` | While the element is being dragged |
+
+```svelte
+<motion.button
+    animate={{ opacity: 1 }}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    whileFocus={{ outline: '2px solid #0099ff' }}
+>
+    Interactive button
+</motion.button>
+```

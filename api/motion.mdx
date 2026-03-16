@@ -1,0 +1,207 @@
+---
+title: "motion"
+description: "The motion object provides animation-capable versions of every standard HTML and SVG element."
+---
+
+The `motion` object is the primary entry point for Svelte Motion. It exposes animation-enhanced versions of all standard HTML and SVG elements as properties. Use `<motion.div>`, `<motion.button>`, `<motion.svg>`, and so on exactly like their native counterparts — plus any [MotionProps](/api/motion-props).
+
+## Import
+
+```typescript
+import { motion } from '@humanspeak/svelte-motion'
+```
+
+## How it works
+
+The `motion` object is built by lowercasing each generated component name and collecting them into a single typed record:
+
+```typescript
+export const motion: MotionComponents = Object.fromEntries(
+    Object.entries(html).map(([key, component]) => [key.toLowerCase(), component])
+) as MotionComponents
+```
+
+Every property on `motion` is a Svelte 5 component that wraps the corresponding HTML or SVG element with the full [MotionProps](/api/motion-props) API.
+
+## Supported tags
+
+### Common HTML elements
+
+| Tag | Usage |
+|-----|-------|
+| `div` | `<motion.div>` |
+| `span` | `<motion.span>` |
+| `p` | `<motion.p>` |
+| `button` | `<motion.button>` |
+| `a` | `<motion.a>` |
+| `ul` | `<motion.ul>` |
+| `li` | `<motion.li>` |
+| `ol` | `<motion.ol>` |
+| `form` | `<motion.form>` |
+| `input` | `<motion.input>` |
+| `img` | `<motion.img>` |
+| `section` | `<motion.section>` |
+| `article` | `<motion.article>` |
+| `header` | `<motion.header>` |
+| `footer` | `<motion.footer>` |
+| `nav` | `<motion.nav>` |
+| `main` | `<motion.main>` |
+| `aside` | `<motion.aside>` |
+| `h1`–`h6` | `<motion.h1>` … `<motion.h6>` |
+| `dialog` | `<motion.dialog>` |
+| `details` | `<motion.details>` |
+| `table` | `<motion.table>` |
+| `tr`, `td`, `th` | `<motion.tr>`, `<motion.td>`, `<motion.th>` |
+| `textarea` | `<motion.textarea>` |
+| `select` | `<motion.select>` |
+| `label` | `<motion.label>` |
+| `canvas` | `<motion.canvas>` |
+| `video` | `<motion.video>` |
+| `audio` | `<motion.audio>` |
+| `iframe` | `<motion.iframe>` |
+| `pre` | `<motion.pre>` |
+| `code` | `<motion.code>` |
+
+### SVG elements
+
+| Tag | Usage |
+|-----|-------|
+| `svg` | `<motion.svg>` |
+| `path` | `<motion.path>` |
+| `circle` | `<motion.circle>` |
+| `rect` | `<motion.rect>` |
+| `ellipse` | `<motion.ellipse>` |
+| `line` | `<motion.line>` |
+| `polygon` | `<motion.polygon>` |
+| `polyline` | `<motion.polyline>` |
+| `g` | `<motion.g>` |
+| `defs` | `<motion.defs>` |
+| `use` | `<motion.use>` |
+| `text` | `<motion.text>` |
+| `tspan` | `<motion.tspan>` |
+| `image` | `<motion.image>` |
+| `symbol` | `<motion.symbol>` |
+| `mask` | `<motion.mask>` |
+| `clippath` | `<motion.clippath>` |
+| `filter` | `<motion.filter>` |
+| `lineargradient` | `<motion.lineargradient>` |
+| `radialgradient` | `<motion.radialgradient>` |
+| `marker` | `<motion.marker>` |
+| `pattern` | `<motion.pattern>` |
+
+<Note>
+  The following tags are **excluded** from the generated set: `script`, `style`, `link`, `meta`, `title`, `head`, `html`, `body`. These are infrastructure tags that should not be animated.
+</Note>
+
+## Props
+
+Every `motion.*` element accepts all standard HTML/SVG attributes for that element, plus the full [MotionProps](/api/motion-props) interface. All props are forwarded to the underlying DOM element.
+
+## Examples
+
+### Basic fade-in div
+
+```svelte
+<script>
+  import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ duration: 0.4 }}
+>
+  Hello, world
+</motion.div>
+```
+
+### Animated button with hover and tap
+
+```svelte
+<script>
+  import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button
+  initial={{ opacity: 0, scale: 0.9 }}
+  animate={{ opacity: 1, scale: 1 }}
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  transition={{ duration: 0.2 }}
+>
+  Click me
+</motion.button>
+```
+
+### Animated SVG path
+
+```svelte
+<script>
+  import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.svg width="100" height="100" viewBox="0 0 100 100">
+  <motion.path
+    d="M10 50 L90 50"
+    stroke="currentColor"
+    stroke-width="2"
+    initial={{ pathLength: 0 }}
+    animate={{ pathLength: 1 }}
+    transition={{ duration: 1, ease: 'easeInOut' }}
+  />
+</motion.svg>
+```
+
+### Animated image
+
+```svelte
+<script>
+  import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.img
+  src="/hero.jpg"
+  alt="Hero"
+  initial={{ opacity: 0, scale: 0.95 }}
+  animate={{ opacity: 1, scale: 1 }}
+  transition={{ duration: 0.5 }}
+/>
+```
+
+### Animated list items with variants
+
+```svelte
+<script>
+  import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+  const list: Variants = {
+    visible: { opacity: 1 },
+    hidden: { opacity: 0 }
+  }
+  const item: Variants = {
+    visible: { opacity: 1, y: 0 },
+    hidden: { opacity: 0, y: 10 }
+  }
+</script>
+
+<motion.ul variants={list} initial="hidden" animate="visible">
+  <motion.li variants={item}>Item 1</motion.li>
+  <motion.li variants={item}>Item 2</motion.li>
+  <motion.li variants={item}>Item 3</motion.li>
+</motion.ul>
+```
+
+### Animated form input
+
+```svelte
+<script>
+  import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.input
+  type="text"
+  placeholder="Search..."
+  whileFocus={{ scale: 1.02 }}
+  transition={{ duration: 0.15 }}
+/>
+```

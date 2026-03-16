@@ -1,0 +1,125 @@
+---
+title: "Tap"
+description: "Animate elements while they are pressed using `whileTap`. Keyboard accessible — Enter and Space trigger the tap animation."
+---
+
+## whileTap
+
+The `whileTap` prop animates a motion component while the element is being pressed. The animation starts on `pointerdown` and reverses on `pointerup`. On `pointercancel` (e.g. a drag starting), the animation is cancelled.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button whileTap={{ scale: 0.95 }}>
+    Press me
+</motion.button>
+```
+
+## Keyboard accessibility
+
+`whileTap` is keyboard accessible. Pressing **Enter** or **Space** on a focusable element triggers the same tap animation as a pointer press. This means keyboard users get visual feedback that matches pointer users:
+
+```svelte
+<motion.button
+    whileTap={{ scale: 0.95 }}
+    onclick={() => console.log('activated')}
+>
+    <!-- Works with click, Enter, and Space -->
+    Submit
+</motion.button>
+```
+
+<Tip>
+  Use `motion.button` instead of `motion.div` for interactive elements so they are natively focusable and keyboard-accessible.
+</Tip>
+
+## Callbacks
+
+| Callback | Fires when |
+|----------|------------|
+| `onTapStart` | `pointerdown` is recognized on the element |
+| `onTap` | `pointerup` completes successfully (tap confirmed) |
+| `onTapCancel` | `pointercancel` fires (tap was cancelled) |
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let status = $state('idle')
+</script>
+
+<motion.button
+    whileTap={{ scale: 0.95 }}
+    onTapStart={() => (status = 'pressing')}
+    onTap={() => (status = 'tapped')}
+    onTapCancel={() => (status = 'cancelled')}
+>
+    {status}
+</motion.button>
+```
+
+## Combining with whileHover
+
+Combining `whileHover` and `whileTap` gives interactive buttons a natural feel: hover lifts slightly, tap presses down.
+
+```svelte
+<motion.button
+    whileHover={{ scale: 1.04, y: -2 }}
+    whileTap={{ scale: 0.96, y: 0 }}
+    transition={{ duration: 0.15 }}
+    style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        background: #0099ff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+    "
+>
+    Click me
+</motion.button>
+```
+
+## With inline transition override
+
+The `whileTap` prop does not support an inline `transition` override directly (unlike `whileHover`). Use the component-level `transition` prop to control tap animation timing:
+
+```svelte
+<motion.button
+    whileTap={{ scale: 0.93, rotate: -2 }}
+    transition={{ duration: 0.1, ease: 'easeIn' }}
+>
+    Quick press
+</motion.button>
+```
+
+## Full button example
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let clicked = $state(0)
+</script>
+
+<motion.button
+    whileHover={{ scale: 1.05 }}
+    whileFocus={{ outline: '2px solid #0099ff', outlineOffset: '2px' }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ duration: 0.15 }}
+    onclick={() => clicked++}
+    style="
+        padding: 12px 24px;
+        border-radius: 8px;
+        background: #0057b8;
+        color: white;
+        border: none;
+        cursor: pointer;
+    "
+>
+    Clicked {clicked} time{clicked === 1 ? '' : 's'}
+</motion.button>
+```

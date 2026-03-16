@@ -1,0 +1,210 @@
+---
+title: "useTransform"
+description: "Map one or more MotionValues through a transform function or input/output range."
+---
+
+## Overview
+
+`useTransform` creates a derived Svelte store whose value is computed from one or more source stores. It has two forms:
+
+- **Mapping form** — maps a numeric source across parallel input and output arrays, with optional clamping and easing.
+- **Function form** — recomputes from an arbitrary function whenever any dependency store changes.
+
+```typescript
+import { useTransform } from '@humanspeak/svelte-motion'
+import type { Readable } from 'svelte/store'
+
+// Mapping form
+function useTransform<T>(
+    source: Readable<number>,
+    input: number[],
+    output: T[],
+    options?: TransformOptions
+): Readable<T>
+
+// Function form
+function useTransform<T>(
+    compute: () => T,
+    deps: Readable<unknown>[]
+): Readable<T>
+```
+
+## TransformOptions
+
+<ParamField path="clamp" type="boolean" default="true">
+  When `true`, clamps the input value to the bounds of the first and last input stop. Set to `false` to allow extrapolation beyond the range.
+</ParamField>
+
+<ParamField path="ease" type="((t: number) => number) | Array<(t: number) => number>">
+  A single easing function applied to every segment, or one function per segment to independently shape each interpolation step.
+</ParamField>
+
+<ParamField path="mixer" type="(from: unknown, to: unknown) => (t: number) => unknown">
+  Custom mixer factory for interpolating non-numeric output types (e.g. colours or objects).
+</ParamField>
+
+---
+
+## Mapping form
+
+Map a numeric source value across parallel input and output arrays. The input and output arrays must be the same length.
+
+### Basic range mapping
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  // A value that goes from 0 to 1
+  const progress = useMotionValue(0)
+
+  // Map 0→1 progress to 0→360 degrees rotation
+  const rotate = useTransform(progress, [0, 1], [0, 360])
+
+  // Map 0→1 progress to 1→0.5 opacity
+  const opacity = useTransform(progress, [0, 1], [1, 0.5])
+</script>
+
+<input
+  type="range"
+  min="0" max="1" step="0.01"
+  oninput={(e) => progress.set(Number(e.currentTarget.value))}
+/>
+
+<div style={styleString({ rotate: $rotate, opacity: $opacity })} class="box" />
+```
+
+### Scroll-linked opacity
+
+A classic use case is fading an element out as the user scrolls:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+
+  // Fade from fully visible to invisible over the first 30% of scroll
+  const opacity = useTransform(scrollYProgress, [0, 0.3], [1, 0])
+</script>
+
+<section style={styleString({ opacity: $opacity })}>
+  Scroll to fade me out
+</section>
+```
+
+### Multi-stop mapping
+
+Use more than two stops to create non-linear mappings:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+
+  // Parallax: element moves at different speed in each scroll zone
+  const y = useTransform(
+    scrollYProgress,
+    [0, 0.5, 1],
+    [0, -50, -200]
+  )
+</script>
+
+<div style={styleString({ y: $y })} class="parallax-layer" />
+```
+
+### Easing per segment
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, useTransform, styleString } from '@humanspeak/svelte-motion'
+  import { easeIn, easeOut } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+
+  const opacity = useTransform(
+    x,
+    [-100, 0, 100],
+    [0, 1, 0],
+    { ease: [easeIn, easeOut] } // one easing per segment
+  )
+</script>
+```
+
+### Disabling clamping
+
+By default, output values are clamped to the output range. Set `clamp: false` to allow extrapolation:
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+
+  // Without clamping — values can exceed the output range
+  const scale = useTransform(x, [0, 100], [1, 2], { clamp: false })
+</script>
+```
+
+---
+
+## Function form
+
+Compute an arbitrary value whenever any of the dependency stores changes:
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  // Combine two values into a single CSS transform
+  const transform = useTransform(
+    () => `perspective(400px) rotateX(${$mouseY * 0.05}deg) rotateY(${$mouseX * 0.05}deg)`,
+    [mouseX, mouseY]
+  )
+
+  function onMouseMove(e: MouseEvent) {
+    mouseX.set(e.clientX - window.innerWidth / 2)
+    mouseY.set(e.clientY - window.innerHeight / 2)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<div style="transform: {$transform}" class="card-3d" />
+```
+
+<Note>
+  The compute function in the function form is called once immediately using `readable()` if the `deps` array is empty, or wrapped in a Svelte `derived()` store otherwise.
+</Note>
+
+---
+
+## Parallax scrolling example
+
+Combining `useScroll` and `useTransform` to create a parallax effect where different layers move at different rates:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollY } = useScroll()
+
+  // Slow layer — moves up 0.3px for every 1px scrolled
+  const slowY = useTransform(scrollY, [0, 1000], [0, -300])
+  // Fast layer — moves up 0.8px for every 1px scrolled
+  const fastY = useTransform(scrollY, [0, 1000], [0, -800])
+</script>
+
+<div class="scene">
+  <div style={styleString({ y: $slowY })} class="layer layer--slow">
+    Background
+  </div>
+  <div style={styleString({ y: $fastY })} class="layer layer--fast">
+    Foreground
+  </div>
+</div>
+```

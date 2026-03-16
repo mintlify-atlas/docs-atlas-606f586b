@@ -1,0 +1,124 @@
+---
+title: "Hover"
+description: "Animate elements on hover using `whileHover`. Gated to true-hover devices — touch devices are never falsely triggered."
+---
+
+## whileHover
+
+The `whileHover` prop animates a motion component when the pointer is hovering over it. When the pointer leaves, the element animates back to its baseline state (`animate` values, or neutral defaults if not set).
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button whileHover={{ scale: 1.05 }}>
+    Hover me
+</motion.button>
+```
+
+## True-hover gating
+
+`whileHover` uses the `(hover: hover)` and `(pointer: fine)` CSS media queries to detect whether the device supports genuine hover before attaching listeners. Both conditions must be true:
+
+- `(hover: hover)` — the primary input can hover
+- `(pointer: fine)` — the primary pointer is precise (mouse, trackpad — not touch)
+
+If either condition is false, the hover listeners are never attached. This prevents sticky hover states on phones and tablets where `touchstart` would otherwise latch the hover state.
+
+<Tip>
+  You don't need to add any touch guards yourself. `whileHover` simply does nothing on touch-only devices.
+</Tip>
+
+## Inline transition override
+
+Embed a `transition` key inside the `whileHover` object to control the timing of the hover animation. This overrides the component-level `transition` for the hover-in animation only:
+
+```svelte
+<motion.button
+    whileHover={{ scale: 1.05, transition: { duration: 0.12 } }}
+    transition={{ duration: 0.3 }}
+>
+    Quick hover, slow baseline restore
+</motion.button>
+```
+
+The baseline restore (on pointer leave) always uses the component-level `transition`.
+
+## Callbacks
+
+Use `onHoverStart` and `onHoverEnd` to respond to hover state changes:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let label = $state('Hover me')
+</script>
+
+<motion.div
+    whileHover={{ scale: 1.05 }}
+    onHoverStart={() => (label = 'Hovering!')}
+    onHoverEnd={() => (label = 'Hover me')}
+>
+    {label}
+</motion.div>
+```
+
+| Callback | Fires when |
+|----------|------------|
+| `onHoverStart` | The pointer enters the element (true hover only) |
+| `onHoverEnd` | The pointer leaves the element |
+
+## Combining with other gesture states
+
+`whileHover` composes with `whileTap`, `whileFocus`, and `whileDrag`. When multiple states are active simultaneously, the most recently activated state wins for conflicting properties:
+
+```svelte
+<motion.button
+    whileHover={{ scale: 1.05, background: '#e0f2fe' }}
+    whileTap={{ scale: 0.96 }}
+    transition={{ duration: 0.15 }}
+>
+    Interactive button
+</motion.button>
+```
+
+## Baseline restoration
+
+When hover ends, the library restores only the properties that `whileHover` changed. The restoration target is computed in this priority order:
+
+1. The corresponding value in `animate` (if set)
+2. The corresponding value in `initial` (if set)
+3. Neutral transform defaults (`scale: 1`, `x: 0`, `opacity: 1`, etc.)
+4. The computed CSS value for non-transform properties
+
+This means you don't need to explicitly set a "reset" value — the library figures it out:
+
+```svelte
+<!-- No need to specify scale: 1 anywhere else. It restores to 1 automatically. -->
+<motion.div whileHover={{ scale: 1.1 }} />
+```
+
+## Full interactive card example
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.15)' }}
+    transition={{ duration: 0.2, ease: 'easeOut' }}
+    style="
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        cursor: pointer;
+    "
+>
+    <h3>Card title</h3>
+    <p>Hover to lift this card.</p>
+</motion.div>
+```

@@ -1,0 +1,175 @@
+---
+title: "useSpring"
+description: "Create spring-physics MotionValues that animate naturally towards a target value."
+---
+
+## Overview
+
+`useSpring` creates a spring-animated readable store. When you call `.set(value)`, the store smoothly animates towards the new target using spring physics — producing natural-feeling motion with configurable stiffness, damping, and mass. You can also call `.jump(value)` to immediately snap to a value without any animation.
+
+It can be used in two ways:
+
+1. **Standalone** — pass an initial number or string, call `.set()` to animate.
+2. **Derived** — pass another readable store (such as a `MotionValue`) and the spring automatically follows it.
+
+```typescript
+import { useSpring } from '@humanspeak/svelte-motion'
+import type { Readable } from 'svelte/store'
+
+function useSpring(
+    source: number | string | Readable<number | string>,
+    options?: SpringOptions
+): Readable<number | string> & {
+    set: (v: number | string) => void
+    jump: (v: number | string) => void
+}
+```
+
+<ParamField path="source" type="number | string | Readable<number | string>" required>
+  Initial value, or a readable store to follow. Supports unit strings such as `"100px"` or `"50%"`.
+</ParamField>
+
+<ParamField path="options" type="SpringOptions">
+  Spring physics configuration. See options below.
+</ParamField>
+
+## SpringOptions
+
+<ParamField path="stiffness" type="number" default="170">
+  Spring stiffness. Higher values produce snappier, faster springs.
+</ParamField>
+
+<ParamField path="damping" type="number" default="26">
+  Spring damping. Higher values reduce oscillation. Set to `0` for an underdamped spring that bounces indefinitely.
+</ParamField>
+
+<ParamField path="mass" type="number" default="1">
+  Mass of the simulated object. Higher mass produces slower, heavier-feeling motion.
+</ParamField>
+
+<ParamField path="restDelta" type="number" default="0.01">
+  Absolute position delta threshold below which the spring is considered at rest.
+</ParamField>
+
+<ParamField path="restSpeed" type="number" default="0.01">
+  Velocity magnitude threshold below which the spring is considered at rest.
+</ParamField>
+
+---
+
+## Basic usage
+
+Animate a value to a new target when the user interacts:
+
+```svelte
+<script lang="ts">
+  import { useSpring, styleString } from '@humanspeak/svelte-motion'
+
+  const scale = useSpring(1, { stiffness: 300, damping: 20 })
+</script>
+
+<button
+  onmouseenter={() => scale.set(1.1)}
+  onmouseleave={() => scale.set(1)}
+  style={styleString({ scale: $scale })}
+>
+  Hover me
+</button>
+```
+
+## Snapping without animation
+
+Use `.jump()` to immediately set the value without triggering the spring:
+
+```svelte
+<script lang="ts">
+  import { useSpring, styleString } from '@humanspeak/svelte-motion'
+
+  const x = useSpring(0, { stiffness: 200, damping: 25 })
+
+  function reset() {
+    x.jump(0) // Instantly resets — no spring animation
+  }
+</script>
+
+<div style={styleString({ x: $x })} />
+<button onclick={reset}>Reset</button>
+```
+
+## Derived from another MotionValue
+
+When you pass a readable store as `source`, the spring automatically tracks it. This is the most common pattern for building spring-smoothed scroll or pointer animations:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useSpring, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+  // The spring follows scrollYProgress with smooth interpolation
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    mass: 0.5
+  })
+</script>
+
+<!-- Scroll progress bar -->
+<div
+  style={styleString({ scaleX: $smoothProgress, transformOrigin: 'left' })}
+  class="progress-bar"
+/>
+```
+
+## Combining with useTransform
+
+Use `useTransform` to map the spring's output to other CSS values:
+
+```svelte
+<script lang="ts">
+  import {
+    useSpring,
+    useTransform,
+    useMotionValue,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const mouseX = useMotionValue(0)
+  // Spring smooths the raw cursor position
+  const springX = useSpring(mouseX, { stiffness: 150, damping: 20 })
+  // Map spring output to a rotation
+  const rotate = useTransform(springX, [-300, 300], [-45, 45])
+
+  function onMouseMove(e: MouseEvent) {
+    mouseX.set(e.clientX - window.innerWidth / 2)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<div style={styleString({ rotate: $rotate })} class="card" />
+```
+
+## Unit strings
+
+Unit strings like `"100px"` or `"50%"` are supported. The unit is preserved throughout animation:
+
+```svelte
+<script lang="ts">
+  import { useSpring, styleString } from '@humanspeak/svelte-motion'
+
+  const width = useSpring('0%', { stiffness: 100, damping: 20 })
+
+  function expand() { width.set('100%') }
+  function collapse() { width.set('0%') }
+</script>
+
+<div style={styleString({ width: $width })} class="panel" />
+<button onclick={expand}>Expand</button>
+<button onclick={collapse}>Collapse</button>
+```
+
+## SSR behaviour
+
+<Note>
+  On the server (where `window` is unavailable), `useSpring` returns a static store initialised to the source value and no-op `.set()` / `.jump()` methods. This prevents hydration mismatches.
+</Note>

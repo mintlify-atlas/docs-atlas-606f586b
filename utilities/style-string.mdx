@@ -1,0 +1,151 @@
+---
+title: "styleString"
+description: "Convert a CSS property object (including MotionValues) to a reactive inline style string with automatic unit inference."
+---
+
+## Overview
+
+`styleString` converts a plain object of CSS properties to an inline style string. It handles unit inference automatically:
+
+- Dimensional properties (anything not in the unitless or degree lists) receive `px`.
+- Rotation properties (`rotate`, `rotateX`, `rotateY`, `rotateZ`, `skew`, `skewX`, `skewY`) receive `deg`.
+- Unitless properties (`opacity`, `scale`, `z-index`, `flex`, `font-weight`, etc.) are left as plain numbers.
+- CamelCase keys are converted to kebab-case.
+
+In Svelte 5, template expressions are re-evaluated whenever their reactive dependencies change. This means passing `$state` variables or dereferenced stores (`$store`) into `styleString` within a template produces a fully reactive style string.
+
+```typescript
+import { styleString } from '@humanspeak/svelte-motion'
+
+type StyleObject = Record<string, string | number>
+
+function styleString(input: StyleObject | (() => StyleObject)): string
+```
+
+<ParamField path="input" type="StyleObject | (() => StyleObject)" required>
+  A plain style object, or a factory function returning one. CamelCase keys are automatically converted to kebab-case.
+</ParamField>
+
+---
+
+## Basic usage
+
+```svelte
+<script lang="ts">
+  import { styleString } from '@humanspeak/svelte-motion'
+
+  let rotate = $state(0)
+  let opacity = $state(1)
+</script>
+
+<!-- Object form — reactive in Svelte 5 templates -->
+<div style={styleString({ rotate, opacity })}>
+  Object form
+</div>
+
+<!-- Factory form — explicit function -->
+<div style={styleString(() => ({ rotate, opacity }))}>
+  Factory form
+</div>
+```
+
+Both forms produce identical output. The factory form is sometimes clearer when building complex style objects or when you want to be explicit about the reactive dependency.
+
+---
+
+## Using with MotionValues
+
+Dereference MotionValues with the `$` prefix to include their current values. Svelte re-evaluates the expression on each store update:
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useSpring,
+    useTransform,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  const x = useSpring(mouseX, { stiffness: 200, damping: 25 })
+  const y = useSpring(mouseY, { stiffness: 200, damping: 25 })
+  const rotate = useTransform(mouseX, [-400, 400], [-15, 15])
+
+  function onMouseMove(e: MouseEvent) {
+    mouseX.set(e.clientX - window.innerWidth / 2)
+    mouseY.set(e.clientY - window.innerHeight / 2)
+  }
+</script>
+
+<svelte:window onmousemove={onMouseMove} />
+
+<div style={styleString({ x: $x, y: $y, rotate: $rotate })} class="card" />
+```
+
+---
+
+## Unit inference reference
+
+| Property type | Example keys | Unit applied |
+|---|---|---|
+| Unitless | `opacity`, `scale`, `z-index`, `flex`, `font-weight`, `line-height` | none |
+| Degree | `rotate`, `rotateX`, `rotateY`, `rotateZ`, `skew`, `skewX`, `skewY` | `deg` |
+| Dimensional | `x`, `y`, `width`, `height`, `top`, `left`, `borderRadius`, ... | `px` |
+
+---
+
+## Scroll-linked example
+
+```svelte
+<script lang="ts">
+  import {
+    useScroll,
+    useTransform,
+    useSpring,
+    styleString
+  } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 })
+  const opacity = useTransform(scrollYProgress, [0, 0.2], [0, 1])
+</script>
+
+<div
+  style={styleString({ scaleX: $scaleX, transformOrigin: 'left' })}
+  class="progress-bar"
+/>
+
+<div style={styleString({ opacity: $opacity })} class="hero-text">
+  Fades in as you scroll
+</div>
+```
+
+---
+
+## stringifyStyleObject (deprecated)
+
+<Warning>
+  `stringifyStyleObject` is deprecated. Use `styleString` instead.
+  
+  `stringifyStyleObject` is a non-reactive plain function — it converts the object once at call time and does not update when values change. In most Svelte 5 templates this distinction is invisible because the whole expression is already reactive, but it provides no factory form and the intent is less clear.
+
+  ```typescript
+  // Deprecated — avoid in new code
+  import { stringifyStyleObject } from '@humanspeak/svelte-motion'
+
+  const style = stringifyStyleObject({ rotate: 45, opacity: 0.5 })
+  // → "rotate: 45deg; opacity: 0.5"
+  ```
+
+  Replace all usages with `styleString`:
+
+  ```typescript
+  // Recommended
+  import { styleString } from '@humanspeak/svelte-motion'
+
+  const style = styleString({ rotate: 45, opacity: 0.5 })
+  // → "rotate: 45deg; opacity: 0.5"
+  ```
+</Warning>

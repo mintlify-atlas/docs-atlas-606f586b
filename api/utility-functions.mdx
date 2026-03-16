@@ -1,0 +1,274 @@
+---
+title: "Utility Functions"
+description: "Imperative animation and math utility functions re-exported from motion."
+---
+
+Svelte Motion re-exports a set of imperative utility functions from `motion`. These can be used independently of the `motion.*` component system for programmatic animations and value computations.
+
+## Import
+
+```typescript
+import {
+  animate,
+  stagger,
+  transform,
+  clamp,
+  distance,
+  distance2D,
+  interpolate,
+  mix,
+  pipe,
+  progress,
+  wrap
+} from '@humanspeak/svelte-motion'
+```
+
+<Note>
+  All functions are re-exported directly from the `motion` package. Refer to the [motion documentation](https://motion.dev) for full API details and advanced usage.
+</Note>
+
+---
+
+## animate
+
+Imperatively animate an element or a value between keyframes. Returns a `AnimationPlaybackControls` object.
+
+```typescript
+animate(
+  element: Element | Element[] | string,
+  keyframes: DOMKeyframesDefinition,
+  options?: AnimationOptions
+): AnimationPlaybackControls
+```
+
+```typescript
+import { animate } from '@humanspeak/svelte-motion'
+
+// Animate a DOM element
+animate('#box', { opacity: 1, x: 100 }, { duration: 0.5 })
+
+// Animate with a CSS selector
+animate('.card', { scale: [0.9, 1] }, { type: 'spring', stiffness: 300 })
+```
+
+---
+
+## stagger
+
+Creates a stagger delay helper for list animations. Returns a function usable as the `delay` in an animation.
+
+```typescript
+stagger(duration: number, options?: StaggerOptions): DelayFunction
+```
+
+<ParamField path="duration" type="number" required>
+  Delay between each element in seconds.
+</ParamField>
+
+<ParamField path="options" type="StaggerOptions">
+  Configuration for `startDelay`, `from`, and `ease`.
+</ParamField>
+
+```typescript
+import { animate, stagger } from '@humanspeak/svelte-motion'
+
+animate('.item', { opacity: 1, y: 0 }, {
+  duration: 0.4,
+  delay: stagger(0.05)
+})
+```
+
+---
+
+## transform
+
+Pure function version of `useTransform`. Maps a value from one range to another without creating a reactive store.
+
+```typescript
+transform(
+  value: number,
+  inputRange: number[],
+  outputRange: number[]
+): number
+
+// Curried form
+transform(
+  inputRange: number[],
+  outputRange: number[]
+): (value: number) => number
+```
+
+```typescript
+import { transform } from '@humanspeak/svelte-motion'
+
+// Direct mapping
+const opacity = transform(0.5, [0, 1], [0, 100]) // 50
+
+// Curried
+const toPercent = transform([0, 1], [0, 100])
+const pct = toPercent(0.75) // 75
+```
+
+---
+
+## clamp
+
+Clamps a value between a minimum and maximum.
+
+```typescript
+clamp(min: number, max: number, value: number): number
+```
+
+```typescript
+import { clamp } from '@humanspeak/svelte-motion'
+
+clamp(0, 100, 150) // 100
+clamp(0, 100, -10)  // 0
+clamp(0, 100, 50)   // 50
+```
+
+---
+
+## distance
+
+Returns the distance between two 1D values.
+
+```typescript
+distance(a: number, b: number): number
+```
+
+```typescript
+import { distance } from '@humanspeak/svelte-motion'
+
+distance(0, 100) // 100
+distance(50, 30) // 20
+```
+
+---
+
+## distance2D
+
+Returns the Euclidean distance between two 2D points.
+
+```typescript
+distance2D(
+  a: { x: number; y: number },
+  b: { x: number; y: number }
+): number
+```
+
+```typescript
+import { distance2D } from '@humanspeak/svelte-motion'
+
+distance2D({ x: 0, y: 0 }, { x: 3, y: 4 }) // 5
+```
+
+---
+
+## interpolate
+
+Creates an interpolation function that maps a value from an input range to an output range, with optional easing and mixing.
+
+```typescript
+interpolate(
+  input: number[],
+  output: (string | number)[],
+  options?: { clamp?: boolean; ease?: EasingFunction[] }
+): (value: number) => string | number
+```
+
+```typescript
+import { interpolate } from '@humanspeak/svelte-motion'
+
+const colorScale = interpolate(
+  [0, 0.5, 1],
+  ['#ff0000', '#00ff00', '#0000ff']
+)
+
+colorScale(0.25) // color between red and green
+```
+
+---
+
+## mix
+
+Linear interpolation between two values.
+
+```typescript
+mix(from: number, to: number, progress: number): number
+mix(from: string, to: string, progress: number): string
+```
+
+```typescript
+import { mix } from '@humanspeak/svelte-motion'
+
+mix(0, 100, 0.5)  // 50
+mix(0, 100, 0.25) // 25
+```
+
+---
+
+## pipe
+
+Composes multiple transformer functions left-to-right. The output of each function is passed as input to the next.
+
+```typescript
+pipe(...transformers: Function[]): Function
+```
+
+```typescript
+import { pipe, transform, clamp } from '@humanspeak/svelte-motion'
+
+const processValue = pipe(
+  (v) => v * 2,
+  (v) => clamp(0, 100, v)
+)
+
+processValue(30) // 60
+processValue(60) // 100 (clamped)
+```
+
+---
+
+## progress
+
+Calculates the normalised progress of a value between two bounds.
+
+```typescript
+progress(from: number, to: number, value: number): number
+```
+
+```typescript
+import { progress } from '@humanspeak/svelte-motion'
+
+progress(0, 100, 50)  // 0.5
+progress(0, 100, 25)  // 0.25
+progress(0, 100, 150) // 1.5 (can exceed 0–1)
+```
+
+---
+
+## wrap
+
+Wraps a value within a range, cycling back to `min` when the value exceeds `max`.
+
+```typescript
+wrap(min: number, max: number, value: number): number
+```
+
+```typescript
+import { wrap } from '@humanspeak/svelte-motion'
+
+wrap(0, 10, 12)  // 2
+wrap(0, 10, -1)  // 9
+wrap(0, 10, 5)   // 5
+```
+
+Useful for creating infinite looping animations:
+
+```typescript
+import { animate, wrap } from '@humanspeak/svelte-motion'
+
+// Infinite repeating position
+const x = wrap(0, 300, currentX)
+```

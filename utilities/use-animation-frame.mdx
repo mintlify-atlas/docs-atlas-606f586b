@@ -1,0 +1,159 @@
+---
+title: "useAnimationFrame"
+description: "Run a callback on every animation frame with elapsed time, automatically cleaned up on component destroy."
+---
+
+## Overview
+
+`useAnimationFrame` sets up an animation loop that runs a callback on every frame via `requestAnimationFrame`. The callback receives a `DOMHighResTimeStamp` representing the time elapsed since the [time origin](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp#the_time_origin) — the same value you would receive directly from `requestAnimationFrame`.
+
+It mirrors Framer Motion's `useAnimationFrame` hook and is SSR-safe: it does nothing when `window` is unavailable.
+
+```typescript
+import { useAnimationFrame } from '@humanspeak/svelte-motion'
+
+function useAnimationFrame(
+    callback: (time: DOMHighResTimeStamp) => void
+): () => void
+```
+
+<ParamField path="callback" type="(time: DOMHighResTimeStamp) => void" required>
+  A function called once per frame. Receives the current `DOMHighResTimeStamp` in milliseconds.
+</ParamField>
+
+Returns a cleanup function that stops the animation loop when called.
+
+---
+
+## Cleanup behaviour
+
+The return value is a stop function. Use it inside a Svelte 5 `$effect` (which calls the cleanup function when the effect re-runs or the component is destroyed) or call it manually in `onDestroy`:
+
+<CodeGroup>
+```svelte $effect (recommended)
+<script lang="ts">
+  import { useAnimationFrame } from '@humanspeak/svelte-motion'
+
+  let ref: HTMLDivElement | undefined
+
+  $effect(() => {
+    // Return the cleanup function — Svelte calls it automatically on destroy
+    return useAnimationFrame((t) => {
+      if (!ref) return
+      const rotate = Math.sin(t / 10000) * 200
+      const y = (1 + Math.sin(t / 1000)) * -50
+      ref.style.transform =
+        `translateY(${y}px) rotateX(${rotate}deg) rotateY(${rotate}deg)`
+    })
+  })
+</script>
+
+<div bind:this={ref}>Animated content</div>
+```
+
+```svelte onDestroy
+<script lang="ts">
+  import { useAnimationFrame } from '@humanspeak/svelte-motion'
+  import { onDestroy } from 'svelte'
+
+  let ref: HTMLDivElement | undefined
+
+  const stop = useAnimationFrame((t) => {
+    if (!ref) return
+    ref.style.opacity = String((Math.sin(t / 1000) + 1) / 2)
+  })
+
+  onDestroy(stop)
+</script>
+
+<div bind:this={ref}>Fading element</div>
+```
+</CodeGroup>
+
+---
+
+## Examples
+
+### Oscillating rotation
+
+Sin-wave rotation driven purely by elapsed time:
+
+```svelte
+<script lang="ts">
+  import { useAnimationFrame } from '@humanspeak/svelte-motion'
+
+  let box: HTMLDivElement | undefined
+
+  $effect(() => {
+    return useAnimationFrame((t) => {
+      if (!box) return
+      box.style.transform = `rotate(${(t / 20) % 360}deg)`
+    })
+  })
+</script>
+
+<div bind:this={box} class="box" />
+```
+
+### Combining with useMotionValue
+
+`useAnimationFrame` is a lower-level tool. For most animations you should prefer `useTime` combined with `useTransform`, but it's useful when you need direct DOM access or complex per-frame logic:
+
+```svelte
+<script lang="ts">
+  import { useAnimationFrame, useMotionValue, styleString } from '@humanspeak/svelte-motion'
+
+  const angle = useMotionValue(0)
+
+  $effect(() => {
+    return useAnimationFrame((t) => {
+      angle.set((t / 20) % 360)
+    })
+  })
+</script>
+
+<div style={styleString({ rotate: $angle })} class="spinner" />
+```
+
+### Conditionally pausing the loop
+
+Since `$effect` re-runs when its reactive dependencies change, you can pause and resume the loop based on component state:
+
+```svelte
+<script lang="ts">
+  import { useAnimationFrame } from '@humanspeak/svelte-motion'
+
+  let isPlaying = $state(true)
+  let angle = $state(0)
+
+  $effect(() => {
+    if (!isPlaying) return // $effect re-runs when isPlaying changes
+    return useAnimationFrame((t) => {
+      angle = (t / 20) % 360
+    })
+  })
+</script>
+
+<div style="transform: rotate({angle}deg)" class="box" />
+<button onclick={() => (isPlaying = !isPlaying)}>
+  {isPlaying ? 'Pause' : 'Play'}
+</button>
+```
+
+<Note>
+  The `time` argument is a `DOMHighResTimeStamp` measured from the browser's time origin, not from when your callback was first registered. Use the difference between frames to calculate `delta` manually if needed:
+
+  ```svelte
+  <script lang="ts">
+    let lastTime = 0
+
+    $effect(() => {
+      return useAnimationFrame((t) => {
+        const delta = lastTime ? t - lastTime : 0
+        lastTime = t
+        // use delta here
+      })
+    })
+  </script>
+  ```
+</Note>

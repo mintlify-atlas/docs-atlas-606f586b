@@ -1,0 +1,276 @@
+---
+title: "Drag"
+description: "Full drag gesture support with constraints, momentum, direction lock, imperative controls, and the `whileDrag` animation state."
+---
+
+## Basic drag
+
+Add the `drag` prop to make any motion element draggable. Set it to `true` for free movement on both axes, or to `'x'` / `'y'` to constrain to a single axis:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- Free drag -->
+<motion.div drag style="width: 60px; height: 60px; background: #0099ff; border-radius: 8px;" />
+
+<!-- Horizontal only -->
+<motion.div drag="x" style="width: 60px; height: 60px; background: #0057b8;" />
+
+<!-- Vertical only -->
+<motion.div drag="y" style="width: 60px; height: 60px; background: #e0f2fe;" />
+```
+
+## Drag props reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `drag` | `true \| 'x' \| 'y'` | — | Enable drag. `true` for both axes. |
+| `dragConstraints` | `{ left?, right?, top?, bottom? } \| HTMLElement` | — | Pixel bounds or container element |
+| `dragElastic` | `number` | `0.35` | Overdrag elasticity (0 = none, 1 = full) |
+| `dragMomentum` | `boolean` | `true` | Inertia after release |
+| `dragTransition` | `DragTransition` | — | Inertia physics configuration |
+| `dragDirectionLock` | `boolean` | `false` | Lock to first detected axis |
+| `dragPropagation` | `boolean` | `false` | Allow bubbling to parent drags |
+| `dragSnapToOrigin` | `boolean` | `false` | Snap back to origin on release |
+| `dragListener` | `boolean` | `true` | Enable the default pointer listener |
+| `dragControls` | `DragControls` | — | Imperative controls object |
+| `whileDrag` | `DOMKeyframesDefinition` | — | Animation state while dragging |
+
+## Constraints
+
+### Pixel bounds
+
+Pass an object with optional `left`, `right`, `top`, `bottom` keys (in pixels, relative to the element's origin):
+
+```svelte
+<motion.div
+    drag="x"
+    dragConstraints={{ left: -150, right: 150 }}
+    style="width: 60px; height: 60px; background: #0099ff; border-radius: 50%;"
+/>
+```
+
+### Container element
+
+Pass an `HTMLElement` reference to constrain the drag within that element's bounding box:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let container: HTMLElement
+</script>
+
+<div bind:this={container} style="width: 300px; height: 300px; border: 2px dashed #ccc;">
+    <motion.div
+        drag
+        dragConstraints={container}
+        style="width: 60px; height: 60px; background: #0099ff;"
+    />
+</div>
+```
+
+## Elasticity
+
+`dragElastic` controls how far the element can be dragged beyond its constraints before snapping back. `0` means hard stop, `1` means the element follows the pointer all the way regardless of constraints.
+
+```svelte
+<!-- Hard stop at constraint boundary -->
+<motion.div drag="x" dragConstraints={{ left: -100, right: 100 }} dragElastic={0} />
+
+<!-- Very bouncy — goes well past constraints -->
+<motion.div drag="x" dragConstraints={{ left: -100, right: 100 }} dragElastic={0.7} />
+```
+
+## Momentum
+
+By default, releasing a drag continues with inertia. Set `dragMomentum={false}` to disable this:
+
+```svelte
+<motion.div drag dragMomentum={false} dragConstraints={{ left: -100, right: 100 }} />
+```
+
+Configure the inertia physics with `dragTransition`:
+
+```svelte
+<motion.div
+    drag
+    dragTransition={{
+        bounceStiffness: 400,
+        bounceDamping: 20,
+        power: 0.8,
+        timeConstant: 300
+    }}
+/>
+```
+
+| Key | Description |
+|-----|-------------|
+| `bounceStiffness` | Spring stiffness when hitting a constraint boundary |
+| `bounceDamping` | Spring damping at boundary |
+| `power` | Velocity decay power (lower = slower decay) |
+| `timeConstant` | Decay time constant in milliseconds |
+| `restDelta` | Movement threshold to consider at rest |
+| `restSpeed` | Speed threshold to consider at rest |
+
+## Direction lock
+
+Set `dragDirectionLock={true}` to lock movement to the first detected axis once the drag has traveled 4px:
+
+```svelte
+<motion.div drag dragDirectionLock />
+```
+
+Combine with `onDirectionLock` to react when the axis is determined:
+
+```svelte
+<motion.div
+    drag
+    dragDirectionLock
+    onDirectionLock={(axis) => console.log('locked to', axis)}
+/>
+```
+
+## `whileDrag` animation state
+
+The `whileDrag` prop animates the element while it is being dragged. It restores to baseline when the drag ends:
+
+```svelte
+<motion.div
+    drag
+    whileDrag={{ scale: 1.1, opacity: 0.8, cursor: 'grabbing' }}
+    style="width: 80px; height: 80px; background: #0099ff; cursor: grab;"
+/>
+```
+
+## Callbacks
+
+| Callback | Signature | Fires when |
+|----------|-----------|------------|
+| `onDragStart` | `(event, info) => void` | Drag begins |
+| `onDrag` | `(event, info) => void` | Pointer moves during drag |
+| `onDragEnd` | `(event, info) => void` | Drag pointer is released |
+| `onDirectionLock` | `(axis) => void` | Axis is locked (requires `dragDirectionLock`) |
+| `onDragTransitionEnd` | `() => void` | Post-release inertia animation completes |
+
+The `info` object passed to `onDragStart`, `onDrag`, and `onDragEnd` has this shape:
+
+```typescript
+type DragInfo = {
+    point: { x: number; y: number }      // Current pointer position
+    delta: { x: number; y: number }      // Delta from drag start
+    offset: { x: number; y: number }     // Accumulated offset from origin
+    velocity: { x: number; y: number }   // Current velocity in px/s
+}
+```
+
+```svelte
+<motion.div
+    drag
+    onDragStart={(e, info) => console.log('drag started at', info.point)}
+    onDrag={(e, info) => console.log('offset', info.offset)}
+    onDragEnd={(e, info) => console.log('velocity', info.velocity)}
+/>
+```
+
+## Snap to origin
+
+Set `dragSnapToOrigin={true}` to make the element spring back to its natural position (0, 0) after being released:
+
+```svelte
+<motion.div drag dragSnapToOrigin style="width: 60px; height: 60px; background: #0099ff;" />
+```
+
+## Imperative drag controls
+
+Use `createDragControls()` to start a drag from an external element — for example, a handle that initiates dragging on a separate target.
+
+<Steps>
+  <Step title="Create controls">
+    ```svelte
+    <script lang="ts">
+        import { motion, createDragControls } from '@humanspeak/svelte-motion'
+
+        const controls = createDragControls()
+    </script>
+    ```
+  </Step>
+
+  <Step title="Attach the handle">
+    ```svelte
+    <button onpointerdown={(e) => controls.start(e)}>
+        Drag handle
+    </button>
+    ```
+  </Step>
+
+  <Step title="Disable the default listener">
+    Pass `dragListener={false}` so the draggable element itself does not respond to pointer events directly — only the handle controls it:
+
+    ```svelte
+    <motion.div
+        drag="x"
+        dragControls={controls}
+        dragListener={false}
+        dragConstraints={{ left: -120, right: 120 }}
+        whileDrag={{ scale: 1.03 }}
+        style="width: 80px; height: 80px; background: #0099ff;"
+    />
+    ```
+  </Step>
+</Steps>
+
+### Full drag controls example
+
+```svelte
+<script lang="ts">
+    import { motion, createDragControls } from '@humanspeak/svelte-motion'
+
+    const controls = createDragControls()
+</script>
+
+<div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+    <!-- Handle -->
+    <button
+        onpointerdown={(e) => controls.start(e)}
+        style="
+            cursor: grab;
+            padding: 8px 16px;
+            background: #e0f2fe;
+            border: 1px solid #0099ff;
+            border-radius: 6px;
+        "
+    >
+        Drag handle
+    </button>
+
+    <!-- Draggable target -->
+    <motion.div
+        drag="x"
+        dragControls={controls}
+        dragListener={false}
+        dragConstraints={{ left: -120, right: 120 }}
+        dragElastic={0.2}
+        whileDrag={{ scale: 1.05, opacity: 0.85 }}
+        style="
+            width: 80px;
+            height: 80px;
+            background: #0099ff;
+            border-radius: 12px;
+        "
+    />
+</div>
+```
+
+## Nested drags
+
+By default, a drag gesture in a child element does not propagate to parent draggable elements. Set `dragPropagation={true}` on the child to allow the parent to also receive drag events:
+
+```svelte
+<!-- Child drag propagates to parent -->
+<motion.div drag>
+    <motion.div drag dragPropagation />
+</motion.div>
+```

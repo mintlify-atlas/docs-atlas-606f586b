@@ -1,0 +1,95 @@
+---
+title: "Introduction"
+description: "Svelte Motion brings a Framer Motion-style animation API to Svelte 5 — motion components, variants, gestures, exit animations, layout animation, and utility hooks."
+---
+
+## What is Svelte Motion?
+
+Svelte Motion is an animation library for Svelte 5 that provides a **Framer Motion-compatible API**. If you've used Motion for React, you already know most of the API. Common React examples can be translated to Svelte with minimal changes.
+
+It is built on top of the [`motion`](https://motion.dev) library and provides a thin Svelte compatibility layer, giving you hardware-accelerated animations powered by native browser APIs.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ duration: 0.2 }}
+>
+    Hello motion
+</motion.button>
+```
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="motion components" icon="wand-magic-sparkles" href="/concepts/motion-components">
+    Use `motion.div`, `motion.button`, `motion.svg`, and any other HTML or SVG element — all supercharged with animation props.
+  </Card>
+  <Card title="Variants" icon="diagram-project" href="/concepts/variants">
+    Define named animation states and propagate them through a component tree with a single prop change.
+  </Card>
+  <Card title="AnimatePresence" icon="door-open" href="/animations/animate-presence">
+    Animate elements as they enter and exit the DOM with `mode="sync"`, `"wait"`, or `"popLayout"`.
+  </Card>
+  <Card title="Gestures" icon="hand-pointer" href="/gestures/hover">
+    `whileHover`, `whileTap`, `whileFocus`, `whileInView`, and full drag support — cross-device and accessible.
+  </Card>
+  <Card title="Layout animations" icon="arrows-maximize" href="/animations/layout">
+    Smoothly animate layout changes using FLIP. Works with `layout`, `layout="position"`, and `layoutId`.
+  </Card>
+  <Card title="Spring physics" icon="atom" href="/utilities/use-spring">
+    Natural-feeling springs via `useSpring` and `transition: { type: 'spring' }` — configurable stiffness, damping, and bounce.
+  </Card>
+  <Card title="Motion values" icon="chart-line" href="/utilities/use-motion-value">
+    Reactive values that power scroll-linked, time-based, and physics-driven animations without re-renders.
+  </Card>
+  <Card title="SSR support" icon="server" href="/concepts/ssr">
+    Initial animation state is rendered server-side. Hydration is designed to avoid flicker.
+  </Card>
+</CardGroup>
+
+## Framer Motion API parity
+
+The goal is to allow React/Framer Motion examples to be translated to Svelte with minimal changes. Current parity status:
+
+| Capability | Status |
+|---|---|
+| `initial` / `animate` / `transition` | Supported |
+| `variants` (string keys + inheritance) | Supported |
+| `whileHover` / `whileTap` / `whileFocus` / `whileInView` | Supported |
+| Drag (`drag`, constraints, momentum, controls, callbacks) | Supported |
+| `AnimatePresence` (`initial`, `mode`, `onExitComplete`) | Supported |
+| Layout (`layout`, `layout="position"`) | Supported (single-element FLIP) |
+| Shared layout (`layoutId`) | Supported |
+| Pan gesture API (`whilePan`, `onPan*`) | Not yet supported |
+| `MotionConfig` parity beyond `transition` | Partial |
+| `reducedMotion`, `features`, `transformPagePoint` | Not yet supported |
+
+## Installation
+
+```bash
+npm install @humanspeak/svelte-motion
+```
+
+Then import what you need:
+
+```svelte
+<script lang="ts">
+    import { motion, AnimatePresence, MotionConfig } from '@humanspeak/svelte-motion'
+</script>
+```
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get your first animation running in under 5 minutes.
+  </Card>
+  <Card title="Core concepts" icon="book" href="/concepts/motion-components">
+    Understand motion components, animate, and transitions.
+  </Card>
+</CardGroup>

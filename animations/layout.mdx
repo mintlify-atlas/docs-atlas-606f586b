@@ -1,0 +1,222 @@
+---
+title: "Layout animations"
+description: "Smoothly animate layout changes using FLIP. Works with `layout`, `layout=\"position\"`, and `layoutId`."
+---
+
+Layout animations let you animate an element from its old position/size to its new position/size whenever its layout changes — without needing to know the values upfront. Svelte Motion uses the **FLIP** (First, Last, Invert, Play) technique under the hood.
+
+## The `layout` prop
+
+Add `layout` to any motion component to opt it in to layout animations. Whenever the element's bounding box changes — due to sibling additions/removals, CSS class changes, or reactive state — it animates smoothly to its new position and size.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let expanded = $state(false)
+</script>
+
+<motion.div
+    layout
+    style={expanded ? 'width: 300px; height: 200px;' : 'width: 100px; height: 100px;'}
+    onclick={() => (expanded = !expanded)}
+/>
+```
+
+With `layout`, the element animates **both translation and scale** simultaneously.
+
+### `layout="position"`
+
+Use `layout="position"` to animate **translation only** — the element moves to its new position without scaling. This is useful when you want to preserve the element's visible size while repositioning it.
+
+```svelte
+<motion.div layout="position" />
+```
+
+<Tabs>
+  <Tab title="layout (translate + scale)">
+    ```svelte
+    <script lang="ts">
+        import { motion } from '@humanspeak/svelte-motion'
+
+        let wide = $state(false)
+    </script>
+
+    <!-- Animates both position and size -->
+    <motion.div
+        layout
+        style={wide ? 'width: 400px;' : 'width: 120px;'}
+        onclick={() => (wide = !wide)}
+    />
+    ```
+  </Tab>
+
+  <Tab title="layout='position' (translate only)">
+    ```svelte
+    <script lang="ts">
+        import { motion } from '@humanspeak/svelte-motion'
+
+        let right = $state(false)
+    </script>
+
+    <!-- Animates position only — size change is instant -->
+    <motion.div
+        layout="position"
+        class={right ? 'ml-auto' : ''}
+        onclick={() => (right = !right)}
+    />
+    ```
+  </Tab>
+</Tabs>
+
+## How FLIP works
+
+The library measures the element's position **before** and **after** the layout change, then:
+
+1. **First** — snapshot the rect before the update
+2. **Last** — let the DOM update and measure the new rect
+3. **Invert** — pre-apply the inverse transform so the element appears to still be in the old position
+4. **Play** — animate from the inverted (old) state to identity (new position)
+
+This is handled internally by `measureRect`, `computeFlipTransforms`, and `runFlipAnimation` in `layout.ts`. Layout changes are detected via `ResizeObserver` and `MutationObserver`.
+
+## Customizing the layout transition
+
+Layout animations respect the component's `transition` prop:
+
+```svelte
+<motion.div
+    layout
+    transition={{ type: 'spring', visualDuration: 0.4, bounce: 0.25 }}
+/>
+```
+
+## `layoutId` — shared layout animations
+
+`layoutId` animates an element **between two separate DOM positions** — for example, a thumbnail that expands into a modal, or a selection indicator that moves between tabs.
+
+When one element with a `layoutId` unmounts and another with the **same `layoutId`** mounts, the new element animates from the old element's last known rect:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let selected = $state<string | null>(null)
+    const tabs = ['Overview', 'Details', 'Settings']
+</script>
+
+<div style="display: flex; gap: 16px;">
+    {#each tabs as tab}
+        <button onclick={() => (selected = tab)} style="position: relative; padding: 8px 16px;">
+            {tab}
+            {#if selected === tab}
+                <motion.div
+                    layoutId="underline"
+                    style="
+                        position: absolute;
+                        bottom: 0; left: 0; right: 0;
+                        height: 2px;
+                        background: #0099ff;
+                    "
+                />
+            {/if}
+        </button>
+    {/each}
+</div>
+```
+
+The `underline` element slides smoothly between whichever tab is currently selected.
+
+<Note>
+  `layoutId` uses a **module-level singleton registry**. When an element with a given `layoutId` unmounts, it snapshots its rect. The next element with the same `layoutId` that mounts consumes that snapshot (one-shot) and animates from it.
+</Note>
+
+## When to use layout animations vs CSS transitions
+
+| Scenario | Recommendation |
+|---|---|
+| Size or position driven by CSS class changes | `layout` or `layout="position"` |
+| An indicator moving between a fixed set of options | `layoutId` |
+| Simple color/opacity change | CSS `transition` is fine |
+| Complex multi-element choreography | CSS transitions cannot do this — use layout animations |
+
+## Current limitations
+
+<Warning>
+  Layout animations in Svelte Motion are **single-element FLIP only**. There is no `LayoutGroup` support yet. This means:
+
+  - Layout animations are scoped to the individual element, not coordinated across the full tree.
+  - `layoutId` works globally (module-level registry) but without `LayoutGroup` isolation.
+  - CSS `transform` properties animated by gesture states (`whileHover`, `whileDrag`, etc.) may interfere with FLIP measurements — consider using separate elements for gesture overlays.
+</Warning>
+
+## Examples
+
+<CodeGroup>
+
+```svelte Expanding card
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let open = $state(false)
+</script>
+
+<motion.div
+    layout
+    onclick={() => (open = !open)}
+    style="
+        background: #0099ff;
+        border-radius: 12px;
+        padding: 16px;
+        width: {open ? '320px' : '120px'};
+        height: {open ? '200px' : '60px'};
+        cursor: pointer;
+    "
+    transition={{ type: 'spring', visualDuration: 0.4, bounce: 0.2 }}
+>
+    {#if open}
+        <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+        >
+            Expanded content
+        </motion.p>
+    {/if}
+</motion.div>
+```
+
+```svelte Tab underline (layoutId)
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    const tabs = ['Home', 'About', 'Contact']
+    let active = $state('Home')
+</script>
+
+<nav style="display: flex; gap: 8px;">
+    {#each tabs as tab}
+        <button
+            onclick={() => (active = tab)}
+            style="position: relative; padding: 8px 16px; border: none; background: none;"
+        >
+            {tab}
+            {#if active === tab}
+                <motion.div
+                    layoutId="tab-indicator"
+                    style="
+                        position: absolute;
+                        inset: 0;
+                        background: #e0f2fe;
+                        border-radius: 6px;
+                        z-index: -1;
+                    "
+                    transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.2 }}
+                />
+            {/if}
+        </button>
+    {/each}
+</nav>
+```
+
+</CodeGroup>

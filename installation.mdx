@@ -1,0 +1,130 @@
+---
+title: "Installation"
+description: "Install @humanspeak/svelte-motion and configure it for your Svelte 5 project."
+---
+
+## Install the package
+
+<CodeGroup>
+
+```bash npm
+npm install @humanspeak/svelte-motion
+```
+
+```bash yarn
+yarn add @humanspeak/svelte-motion
+```
+
+```bash pnpm
+pnpm add @humanspeak/svelte-motion
+```
+
+</CodeGroup>
+
+### Peer dependencies
+
+| Package | Minimum version |
+|---------|-----------------|
+| `svelte` | `>= 5.0.0` |
+
+Svelte Motion is built on Svelte 5 runes and will not work with Svelte 4 or earlier.
+
+## Importing
+
+Import from the package root. Everything you need is exported from a single entry point:
+
+```typescript
+import { motion, AnimatePresence, MotionConfig } from '@humanspeak/svelte-motion'
+```
+
+Named exports also include all types, easing functions, utility hooks, and the `animate` imperative API:
+
+```typescript
+import {
+    motion,
+    AnimatePresence,
+    MotionConfig,
+    // Types
+    type Variants,
+    type MotionTransition,
+    // Easing functions
+    easeIn,
+    easeOut,
+    easeInOut,
+    cubicBezier,
+    backOut,
+    // Hooks
+    useMotionValue,
+    useSpring,
+    useTransform,
+    useScroll,
+    // Imperative API (re-exported from 'motion')
+    animate,
+    stagger
+} from '@humanspeak/svelte-motion'
+```
+
+## TypeScript setup
+
+TypeScript support is first-class — no additional configuration is required. All components and utilities ship with full type definitions.
+
+```svelte
+<script lang="ts">
+    import { motion, type Variants } from '@humanspeak/svelte-motion'
+
+    const variants: Variants = {
+        hidden: { opacity: 0, y: 8 },
+        visible: { opacity: 1, y: 0 }
+    }
+</script>
+
+<motion.div variants={variants} initial="hidden" animate="visible" />
+```
+
+Type-only imports can be done with the standard `import type` syntax:
+
+```typescript
+import type {
+    Variants,
+    MotionAnimate,
+    MotionInitial,
+    MotionTransition,
+    MotionWhileHover,
+    MotionWhileTap,
+    MotionWhileFocus,
+    MotionWhileInView,
+    MotionWhileDrag,
+    DragControls,
+    DragConstraints
+} from '@humanspeak/svelte-motion'
+```
+
+## SvelteKit setup
+
+Svelte Motion works with SvelteKit out of the box — no additional adapter configuration or plugin is needed.
+
+Components are fully SSR-compatible. The initial visual state is rendered server-side from the `initial` prop (or the first keyframe of `animate` when `initial` is not set). See [SSR](/concepts/ssr) for details on how this works.
+
+```svelte
+<!-- +page.svelte -->
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- This renders correctly on the server and hydrates without flicker -->
+<motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.4 }}
+>
+    Content
+</motion.div>
+```
+
+<Note>
+  If you import Svelte Motion in a file that is evaluated in a non-browser environment (for example a Node.js script outside SvelteKit), some browser APIs won't be available. The library is designed for browser/SSR contexts only.
+</Note>
+
+## External dependencies
+
+Svelte Motion wraps the `motion` and `motion-dom` packages. These are listed as regular dependencies and are installed automatically — you do not need to install them separately.

@@ -1,0 +1,228 @@
+---
+title: Layout Animations
+description: FLIP transitions, position-only layout, shared layoutId morphing, and list reordering examples.
+---
+
+Svelte Motion supports two layout animation modes:
+
+- **`layout`** — animates a single element when its size or position changes in the DOM (FLIP).
+- **`layoutId`** — animates between two separate elements that share the same identifier.
+
+## Basic `layout` prop
+
+Add `layout` to any motion element to automatically FLIP-animate when its bounding rect changes:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let isExpanded = $state(false)
+</script>
+
+<motion.div
+    layout
+    onclick={() => (isExpanded = !isExpanded)}
+    style="
+        background: #6366f1;
+        border-radius: 8px;
+        width: {isExpanded ? '300px' : '100px'};
+        height: {isExpanded ? '200px' : '100px'};
+    "
+/>
+```
+
+## Position-only layout
+
+`layout="position"` animates translation only — the element moves but does not scale:
+
+```svelte
+<motion.div layout="position">
+    <!-- Translates to new position smoothly, no scale correction -->
+</motion.div>
+```
+
+## List reordering
+
+The `layout` prop is ideal for lists that shuffle. Each item smoothly animates to its new position:
+
+```svelte
+<script lang="ts">
+    import { motion, styleString } from '@humanspeak/svelte-motion'
+    import { onMount } from 'svelte'
+
+    const colors = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
+    let order = $state([...colors])
+
+    const spring = {
+        type: 'spring' as const,
+        damping: 20,
+        stiffness: 300
+    }
+
+    onMount(() => {
+        const id = setInterval(() => {
+            order = [...order].sort(() => Math.random() - 0.5)
+        }, 1000)
+        return () => clearInterval(id)
+    })
+</script>
+
+<motion.ul style={styleString(() => ({
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 10,
+    width: 300
+}))}>
+    {#each order as backgroundColor (backgroundColor)}
+        <motion.li
+            layout
+            transition={spring}
+            style={styleString(() => ({
+                width: 100,
+                height: 100,
+                borderRadius: '10px',
+                backgroundColor
+            }))}
+        />
+    {/each}
+</motion.ul>
+```
+
+<Note>
+  Use a keyed `{#each}` block so Svelte tracks identity. Without a key, Svelte re-uses DOM nodes in place and layout animation won't fire correctly.
+</Note>
+
+## Toggle switch with `layout`
+
+The `layout` prop can drive UI components like a toggle switch. The ball animates between top and bottom positions using FLIP:
+
+```svelte
+<script lang="ts">
+    import { motion, type MotionTransition } from '@humanspeak/svelte-motion'
+
+    let isOn = $state(true)
+
+    const spring: MotionTransition = {
+        type: 'spring',
+        stiffness: 700,
+        damping: 30
+    }
+
+    const bounce: MotionTransition = {
+        duration: 1.2,
+        ease: (x: number) => {
+            const n1 = 7.5625, d1 = 2.75
+            if (x < 1 / d1)         return n1 * x * x
+            else if (x < 2 / d1)    return n1 * (x -= 1.5 / d1) * x + 0.75
+            else if (x < 2.5 / d1)  return n1 * (x -= 2.25 / d1) * x + 0.9375
+            else                     return n1 * (x -= 2.625 / d1) * x + 0.984375
+        }
+    }
+
+    const currentTransition = $derived(isOn ? spring : bounce)
+</script>
+
+<button
+    class="switch"
+    class:is-on={isOn}
+    onclick={() => (isOn = !isOn)}
+    type="button"
+>
+    <motion.div class="ball" layout transition={currentTransition} />
+</button>
+```
+
+## Shared layout with `layoutId`
+
+`layoutId` animates between two different elements. When element A unmounts and element B with the same `layoutId` mounts, B FLIP-animates from A's last known position.
+
+### Tab underline
+
+The classic use case — a sliding underline that follows the active tab:
+
+```svelte
+<script lang="ts">
+    import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+
+    const allIngredients = [
+        { icon: '🍅', label: 'Tomato' },
+        { icon: '🥬', label: 'Lettuce' },
+        { icon: '🧀', label: 'Cheese' }
+    ]
+
+    let selectedTab = $state(0)
+</script>
+
+<nav>
+    <ul>
+        {#each allIngredients as ingredient, i (ingredient.label)}
+            <motion.li
+                animate={{
+                    backgroundColor:
+                        i === selectedTab
+                            ? 'rgba(255,255,255,0.1)'
+                            : 'transparent'
+                }}
+            >
+                <button onclick={() => (selectedTab = i)}>
+                    {ingredient.icon} {ingredient.label}
+                </button>
+
+                <!-- Only one underline exists at a time — layoutId makes it slide -->
+                <AnimatePresence>
+                    {#if i === selectedTab}
+                        <motion.div
+                            key="underline"
+                            layoutId="underline"
+                            style="position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: royalblue;"
+                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                    {/if}
+                </AnimatePresence>
+            </motion.li>
+        {/each}
+    </ul>
+</nav>
+
+<AnimatePresence mode="wait">
+    {#key selectedTab}
+        <motion.div
+            key="content-{selectedTab}"
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0,  opacity: 1 }}
+            exit={{    y: -10, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+        >
+            <span style="font-size: 80px;">{allIngredients[selectedTab].icon}</span>
+        </motion.div>
+    {/key}
+</AnimatePresence>
+```
+
+<Note>
+  Only one element with a given `layoutId` should be mounted at a time. Use conditional rendering (as above) to ensure the old element unmounts before or as the new one mounts. `layoutId` works best inside `AnimatePresence`, which provides the snapshot/consume registry.
+</Note>
+
+## `layout` vs `layoutId`
+
+| Feature | `layout` | `layoutId` |
+|---------|----------|------------|
+| Same element | Yes — element stays mounted | No — two different elements |
+| Trigger | Bounding rect changes (e.g. CSS flex reflow) | Old element unmounts, new element mounts |
+| Best for | Expanding cards, reordering lists | Tab indicators, selected state morphing |
+
+## API reference
+
+| Prop | Value | Behavior |
+|------|-------|----------|
+| `layout` | `true` | Animate translate + scale on bounding rect change |
+| `layout` | `"position"` | Animate translate only (no scale) |
+| `layoutId` | `string` | Shared key — animates from previous element's position |
+
+## Related
+
+- [Animations: Layout](/animations/layout) — full layout reference
+- [AnimatePresence examples](/examples/animate-presence) — required for `layoutId`

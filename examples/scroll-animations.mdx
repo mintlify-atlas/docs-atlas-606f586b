@@ -1,0 +1,212 @@
+---
+title: Scroll Animations
+description: whileInView reveal, scroll-linked progress bars, and time-based loop animation examples.
+---
+
+Svelte Motion provides two main approaches for scroll-driven animation: `whileInView` for triggering when elements enter the viewport, and `useScroll` + `useSpring`/`useTransform` for scroll-linked values.
+
+## `whileInView` fade-up reveal
+
+Animate an element when it enters the viewport. The animation reverses when the element leaves:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    initial={{ opacity: 0, y: 100, scale: 0.8 }}
+    whileInView={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+            type: 'spring',
+            bounce: 0.4,
+            duration: 0.8
+        }
+    }}
+>
+    I animate when in view!
+</motion.div>
+```
+
+<Note>
+  `whileInView` uses `IntersectionObserver` under the hood. The element animates in when it crosses the threshold, and animates back to `initial` when it leaves. Framer Motion–style `viewport` options are not yet supported.
+</Note>
+
+## Scroll progress bar
+
+Track scroll position in a container and drive a progress bar with a spring:
+
+```svelte
+<script lang="ts">
+    import { useScroll, useSpring } from '@humanspeak/svelte-motion'
+
+    let containerEl: HTMLElement | undefined = $state(undefined)
+
+    // Pass a getter so useScroll resolves the element after mount
+    const { scrollYProgress } = useScroll({ container: () => containerEl })
+    const scaleX = useSpring(scrollYProgress)
+</script>
+
+<div class="wrapper">
+    <!-- Progress bar driven by scroll position -->
+    <div
+        class="progress-bar"
+        style="transform: scaleX({$scaleX}); transform-origin: left;"
+    />
+
+    <div class="scroll-area" bind:this={containerEl}>
+        <!-- Scrollable content -->
+    </div>
+</div>
+
+<style>
+    .wrapper {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 6px;
+        background: #ff0088;
+        transform-origin: left;
+    }
+</style>
+```
+
+<Tip>
+  Pass a getter function (`() => containerEl`) rather than the element directly. This ensures `useScroll` resolves the ref after the component mounts in Svelte 5's `$state` reactivity model.
+</Tip>
+
+## Scroll progress with `whileInView` cards
+
+Combine a scroll progress bar with per-card `whileInView` reveal animations:
+
+```svelte
+<script lang="ts">
+    import { motion, useScroll, useSpring } from '@humanspeak/svelte-motion'
+
+    let containerEl: HTMLElement | undefined = $state(undefined)
+
+    const { scrollYProgress } = useScroll({ container: () => containerEl })
+    const scaleX = useSpring(scrollYProgress)
+
+    const colors = ['#ff0088', '#dd00ff', '#0088ff', '#00cc88', '#ffaa00']
+</script>
+
+<div class="wrapper">
+    <div class="progress-bar" style="transform: scaleX({$scaleX});"></div>
+
+    <div class="scroll-area" bind:this={containerEl}>
+        {#each colors as color, i (color)}
+            <motion.div
+                style="background: {color}; height: 150px; border-radius: 10px;"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+            >
+                <span>{i + 1}</span>
+            </motion.div>
+        {/each}
+    </div>
+</div>
+```
+
+## `useTime` for time-based loops
+
+`useTime` returns a store with milliseconds elapsed since mount. Use Svelte's `derived` to create looping animations that are not scroll-dependent:
+
+```svelte
+<script lang="ts">
+    import { useTime } from '@humanspeak/svelte-motion'
+    import { derived } from 'svelte/store'
+
+    const time = useTime()
+
+    // Derived values from the time store
+    const x      = derived(time, (t) => Math.sin(t / 1000) * 80)
+    const y      = derived(time, (t) => Math.cos(t / 1200) * 60)
+    const rotate = derived(time, (t) => (t / 15) % 360)
+    const scale  = derived(time, (t) => 1 + Math.sin(t / 800) * 0.15)
+    const hue    = derived(time, (t) => (t / 20) % 360)
+</script>
+
+<div
+    style="
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        transform: translate({$x}px, {$y}px) rotate({$rotate}deg) scale({$scale});
+        background: linear-gradient(135deg, hsl({$hue}, 70%, 60%), hsl({$hue + 60}, 70%, 50%));
+    "
+/>
+```
+
+## Keyframe animation with `repeat`
+
+For looping keyframe sequences, pass arrays to `animate` and use `repeat: Infinity` in `transition`:
+
+```svelte
+<script lang="ts">
+    import { motion, styleString } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    style={styleString(() => ({ width: 100, height: 100, background: '#ff0088' }))}
+    animate={{
+        scale: [1, 2, 2, 1, 1],
+        rotate: [0, 0, 180, 180, 0],
+        borderRadius: ['0%', '0%', '50%', '50%', '0%']
+    }}
+    transition={{
+        duration: 2,
+        ease: 'easeInOut',
+        times: [0, 0.2, 0.5, 0.8, 1],
+        repeat: Infinity,
+        repeatDelay: 1
+    }}
+/>
+```
+
+## `useScroll` API
+
+`useScroll` returns motion values for scroll position and progress:
+
+```typescript
+import { useScroll } from '@humanspeak/svelte-motion'
+
+// Page scroll
+const { scrollY, scrollYProgress } = useScroll()
+
+// Container scroll
+const { scrollYProgress } = useScroll({
+    container: () => containerEl
+})
+```
+
+| Return value | Description |
+|---|---|
+| `scrollX` | Horizontal scroll in pixels |
+| `scrollY` | Vertical scroll in pixels |
+| `scrollXProgress` | Horizontal scroll progress `0`–`1` |
+| `scrollYProgress` | Vertical scroll progress `0`–`1` |
+
+## Callbacks for `whileInView`
+
+```svelte
+<motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    onInViewStart={() => console.log('entered viewport')}
+    onInViewEnd={() => console.log('left viewport')}
+/>
+```
+
+## Related
+
+- [Animations: Scroll](/animations/scroll) — full `useScroll` reference
+- [Utilities: useTime](/utilities/use-time) — `useTime` reference
+- [Utilities: useSpring](/utilities/use-spring) — smooth out motion values
+- [Gestures: In View](/gestures/in-view) — full `whileInView` reference

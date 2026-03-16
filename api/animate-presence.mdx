@@ -1,0 +1,181 @@
+---
+title: "AnimatePresence"
+description: "Animate elements when they are added to or removed from the DOM."
+---
+
+`AnimatePresence` enables exit animations for Svelte components. When a direct child is conditionally removed from the DOM, `AnimatePresence` keeps a styled clone in place, runs its `exit` animation, then removes it.
+
+## Import
+
+```typescript
+import { AnimatePresence } from '@humanspeak/svelte-motion'
+```
+
+## Props
+
+<ParamField path="children" type="Snippet">
+  Slotted Svelte content. Direct children that may be conditionally rendered should have a `key` prop.
+</ParamField>
+
+<ParamField path="initial" type="boolean" default="true">
+  When `false`, children skip their enter animation on the **initial** mount of `AnimatePresence`.
+  Subsequent mounts still animate in normally.
+
+  ```svelte
+  <!-- Skip the enter animation on first load -->
+  <AnimatePresence initial={false}>
+    {#if show}
+      <motion.div key="box" exit={{ opacity: 0 }} />
+    {/if}
+  </AnimatePresence>
+  ```
+</ParamField>
+
+<ParamField path="mode" type="'sync' | 'wait' | 'popLayout'" default="'sync'">
+  Controls how enter and exit animations are coordinated.
+
+  | Value | Behaviour |
+  |-------|-----------|
+  | `sync` | Enter and exit animations run simultaneously (default). |
+  | `wait` | The exiting element's animation completes before the entering element begins. |
+  | `popLayout` | Like `sync`, but the exiting element is immediately removed from layout flow so entering elements snap into position without waiting. |
+</ParamField>
+
+<ParamField path="onExitComplete" type="() => void">
+  Optional callback invoked once **all** exit animations have finished. Useful for triggering side effects after a transition sequence completes.
+
+  ```svelte
+  <AnimatePresence onExitComplete={() => console.log('All exits done')}>
+    ...
+  </AnimatePresence>
+  ```
+</ParamField>
+
+## Key requirement
+
+Direct children of `AnimatePresence` **must** have a `key` prop so that Svelte Motion can track which element is entering and which is exiting.
+
+<Warning>
+  Forgetting `key` on direct children will prevent exit animations from firing correctly.
+</Warning>
+
+```svelte
+<AnimatePresence>
+  {#if show}
+    <!-- ✅ key prop is required -->
+    <motion.div key="card" exit={{ opacity: 0 }} />
+  {/if}
+</AnimatePresence>
+```
+
+## Exit transition precedence
+
+Transition configuration is merged in the following priority order (highest wins):
+
+1. `exit.transition` — inline transition on the `exit` prop itself
+2. Element-level `transition` prop
+3. Base default `{ duration: 0.35 }`
+
+## Examples
+
+### Basic fade in / out
+
+```svelte
+<script>
+  import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+  let show = $state(true)
+</script>
+
+<button onclick={() => (show = !show)}>Toggle</button>
+
+<AnimatePresence>
+  {#if show}
+    <motion.div
+      key="box"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    />
+  {/if}
+</AnimatePresence>
+```
+
+### Wait mode — sequential transitions
+
+```svelte
+<script>
+  import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+  let page = $state('a')
+</script>
+
+<AnimatePresence mode="wait">
+  {#if page === 'a'}
+    <motion.div
+      key="page-a"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      Page A
+    </motion.div>
+  {:else}
+    <motion.div
+      key="page-b"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      Page B
+    </motion.div>
+  {/if}
+</AnimatePresence>
+```
+
+### With onExitComplete callback
+
+```svelte
+<script>
+  import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+  let show = $state(true)
+  let status = $state('')
+</script>
+
+<AnimatePresence
+  mode="wait"
+  onExitComplete={() => (status = 'transition complete')}
+>
+  {#if show}
+    <motion.div
+      key="card"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+    />
+  {/if}
+</AnimatePresence>
+
+<p>{status}</p>
+```
+
+### initial={false} — skip first-mount animations
+
+```svelte
+<script>
+  import { AnimatePresence, motion } from '@humanspeak/svelte-motion'
+  let items = $state(['a', 'b', 'c'])
+</script>
+
+<!-- Items already on screen don't animate in on first render -->
+<AnimatePresence initial={false}>
+  {#each items as item (item)}
+    <motion.div
+      key={item}
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+    >
+      {item}
+    </motion.div>
+  {/each}
+</AnimatePresence>
+```

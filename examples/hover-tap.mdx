@@ -1,0 +1,154 @@
+---
+title: Hover & Tap
+description: Scale, color shifts, and spring animations driven by pointer and keyboard gestures.
+---
+
+`whileHover` and `whileTap` let you define animation targets that activate on gesture state. Both props accept the same animation object as `animate` and deactivate automatically when the gesture ends.
+
+<Note>
+  `whileHover` uses true-hover gating — it only fires on devices that support a fine pointer (e.g. mouse), not on touch-only screens. `whileTap` is keyboard-accessible and fires on Enter and Space.
+</Note>
+
+## Scale on hover and press
+
+The simplest pattern: grow on hover, shrink on tap for a tactile button feel.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button
+    whileHover={{ scale: 1.2 }}
+    whileTap={{ scale: 0.8 }}
+>
+    Click me
+</motion.button>
+```
+
+This is the exact code used in the [Hover and Tap example](https://motion.svelte.page/examples/hover-and-tap).
+
+## Custom spring transition
+
+Control the feel of the gesture animation with a `transition` inside the while-prop.
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button
+    whileHover={{
+        scale: 1.05,
+        transition: { duration: 0.12 }
+    }}
+    whileTap={{ scale: 0.97 }}
+>
+    Subtle button
+</motion.button>
+```
+
+<Tip>
+  Transitions inside `whileHover` or `whileTap` only apply while that gesture is active. The return-to-rest animation uses the element's top-level `transition` prop.
+</Tip>
+
+## Spring physics
+
+Passing a spring transition creates a bouncy, physical feel:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    whileHover={{ scale: 1.1 }}
+    whileTap={{ scale: 0.9 }}
+    transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 20
+    }}
+    style="width: 100px; height: 100px; background: #06b6d4; border-radius: 12px;"
+/>
+```
+
+## Focus animation
+
+Use `whileFocus` for keyboard-accessible highlight states:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.button
+    whileFocus={{ scale: 1.05, outline: '2px solid royalblue' }}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+>
+    Accessible button
+</motion.button>
+```
+
+## Combining with `initial` and `animate`
+
+Gesture states layer on top of the element's current animation state:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let isActive = $state(false)
+</script>
+
+<motion.button
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    whileHover={{ scale: 1.05, backgroundColor: '#0284c7' }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ duration: 0.25 }}
+    onclick={() => (isActive = !isActive)}
+>
+    {isActive ? 'Active' : 'Inactive'}
+</motion.button>
+```
+
+## Gesture callbacks
+
+Respond to gesture lifecycle events:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onHoverStart={() => console.log('hover started')}
+    onHoverEnd={() => console.log('hover ended')}
+    onTapStart={() => console.log('tap started')}
+    onTap={() => console.log('tap confirmed')}
+    onTapCancel={() => console.log('tap cancelled')}
+/>
+```
+
+## API reference
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `whileHover` | `MotionStyle` | Animation target while the pointer hovers (fine pointer only) |
+| `whileTap` | `MotionStyle` | Animation target while the element is pressed |
+| `whileFocus` | `MotionStyle` | Animation target while the element has focus |
+| `onHoverStart` | `() => void` | Fires when hover begins |
+| `onHoverEnd` | `() => void` | Fires when hover ends |
+| `onTapStart` | `() => void` | Fires when press begins |
+| `onTap` | `() => void` | Fires on successful tap (press + release on element) |
+| `onTapCancel` | `() => void` | Fires when pointer leaves before release |
+
+## Related
+
+- [Gestures: Hover](/gestures/hover) — full `whileHover` reference
+- [Gestures: Tap](/gestures/tap) — full `whileTap` reference
+- [Gestures: Focus](/gestures/focus) — full `whileFocus` reference

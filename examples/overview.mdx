@@ -1,0 +1,71 @@
+---
+title: Examples
+description: Interactive code examples for Svelte Motion — animations, gestures, layout, and scroll.
+---
+
+Explore real-world examples of Svelte Motion in action. Each page includes working code you can copy directly into your Svelte 5 project.
+
+<CardGroup cols={2}>
+  <Card
+    title="Hover & Tap"
+    icon="cursor-arrow-rays"
+    href="/examples/hover-tap"
+  >
+    Scale, color shifts, and spring transitions triggered by pointer and keyboard gestures.
+  </Card>
+  <Card
+    title="Variants"
+    icon="list-bullet"
+    href="/examples/variants"
+  >
+    Named animation states, parent-to-child propagation, and staggered list reveals.
+  </Card>
+  <Card
+    title="AnimatePresence"
+    icon="arrow-right-start-on-rectangle"
+    href="/examples/animate-presence"
+  >
+    Enter and exit animations with `mode="wait"`, `mode="sync"`, and `mode="popLayout"`.
+  </Card>
+  <Card
+    title="Drag"
+    icon="hand-raised"
+    href="/examples/drag"
+  >
+    Free drag, constrained axes, elastic boundaries, momentum, and imperative drag controls.
+  </Card>
+  <Card
+    title="Layout Animations"
+    icon="squares-plus"
+    href="/examples/layout-animations"
+  >
+    FLIP transitions, position-only layout, shared `layoutId` morphing between elements.
+  </Card>
+  <Card
+    title="Scroll Animations"
+    icon="bars-arrow-up"
+    href="/examples/scroll-animations"
+  >
+    `whileInView` reveal, scroll-linked progress bars, parallax, and time-based loops.
+  </Card>
+</CardGroup>
+
+## Installation
+
+All examples require `@humanspeak/svelte-motion`.
+
+```bash
+npm install @humanspeak/svelte-motion
+```
+
+Import what you need:
+
+```svelte
+<script lang="ts">
+    import { motion, AnimatePresence, type Variants } from '@humanspeak/svelte-motion'
+</script>
+```
+
+<Note>
+  Every example on these pages uses real code from the Svelte Motion source. Nothing is invented — patterns map directly to the library's tested behavior.
+</Note>

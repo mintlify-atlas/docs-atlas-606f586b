@@ -1,0 +1,218 @@
+---
+title: Drag
+description: Free drag, constrained axes, elastic boundaries, momentum, and imperative drag controls.
+---
+
+Add `drag` to any motion component to make it draggable. The element gets physics-based momentum, elastic constraints, and full gesture callbacks.
+
+## Free drag
+
+Enable dragging on both axes:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+    drag
+    whileDrag={{ scale: 1.05, cursor: 'grabbing' }}
+    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+    style="width: 96px; height: 96px; cursor: grab; border-radius: 12px; background: #a78bfa;"
+/>
+```
+
+## Axis-constrained drag
+
+Pass `"x"` or `"y"` to restrict movement to a single axis:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+</script>
+
+<!-- Horizontal slider -->
+<motion.div
+    drag="x"
+    dragConstraints={{ left: -120, right: 120 }}
+    whileDrag={{ scale: 1.05 }}
+    style="width: 60px; height: 60px; border-radius: 50%; background: #f59e0b;"
+/>
+```
+
+## Pixel constraints
+
+Limit drag distance in any direction using pixel offsets from the element's origin:
+
+```svelte
+<motion.div
+    drag
+    dragConstraints={{ left: -100, right: 100, top: -50, bottom: 50 }}
+    style="width: 80px; height: 80px; border-radius: 8px; background: #10b981;"
+/>
+```
+
+## Element constraint (container ref)
+
+Constrain dragging to a parent element's bounding box:
+
+```svelte
+<script lang="ts">
+    import { motion } from '@humanspeak/svelte-motion'
+
+    let bounds: HTMLElement | null = null
+</script>
+
+<div
+    bind:this={bounds}
+    style="width: 224px; height: 224px; border: 2px dashed #4b5563; border-radius: 12px;"
+>
+    <motion.div
+        drag
+        dragConstraints={bounds}
+        whileDrag={{ scale: 1.05, cursor: 'grabbing' }}
+        style="width: 64px; height: 64px; cursor: grab; border-radius: 8px; background: #f59e0b;"
+    />
+</div>
+```
+
+## Elastic boundaries
+
+Control how far the element stretches beyond its constraints. `0` is a hard stop; `1` allows maximum stretch:
+
+```svelte
+<!-- Hard stop -->
+<motion.div
+    drag="x"
+    dragConstraints={{ left: -100, right: 100 }}
+    dragElastic={0}
+    style="width: 60px; height: 60px; border-radius: 8px; background: #ef4444;"
+/>
+
+<!-- Maximum stretch (default ≈ 0.35) -->
+<motion.div
+    drag="x"
+    dragConstraints={{ left: -100, right: 100 }}
+    dragElastic={1}
+    style="width: 60px; height: 60px; border-radius: 8px; background: #3b82f6;"
+/>
+```
+
+## Momentum and physics
+
+After release, the element coasts to a stop. Disable or tune it:
+
+```svelte
+<!-- Disable momentum -->
+<motion.div drag dragMomentum={false} />
+
+<!-- Custom physics -->
+<motion.div
+    drag
+    dragTransition={{
+        bounceStiffness: 300,
+        bounceDamping: 20,
+        power: 0.8,
+        timeConstant: 200
+    }}
+/>
+```
+
+## Snap to origin
+
+Spring the element back to its starting position on release:
+
+```svelte
+<motion.div
+    drag
+    dragSnapToOrigin
+    whileDrag={{ scale: 1.05, cursor: 'grabbing' }}
+    style="width: 80px; height: 80px; cursor: grab; border-radius: 12px; background: #8b5cf6;"
+/>
+```
+
+## `whileDrag` animation
+
+Animate the element while it is being dragged:
+
+```svelte
+<motion.div
+    drag
+    whileDrag={{
+        scale: 1.1,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+    }}
+    style="width: 80px; height: 80px; cursor: grab; border-radius: 8px; background: #ec4899;"
+/>
+```
+
+## Imperative drag controls
+
+Use `createDragControls` to start a drag from an external handle. Set `dragListener={false}` so the element itself does not initiate dragging:
+
+```svelte
+<script lang="ts">
+    import { createDragControls, motion } from '@humanspeak/svelte-motion'
+
+    const controls = createDragControls()
+</script>
+
+<button onpointerdown={(e) => controls.start(e)}>
+    Drag handle
+</button>
+
+<motion.div
+    drag="x"
+    dragControls={controls}
+    dragListener={false}
+    dragConstraints={{ left: -120, right: 120 }}
+    whileDrag={{ scale: 1.03 }}
+    style="width: 80px; height: 80px; border-radius: 8px; background: #6366f1;"
+/>
+```
+
+<Tip>
+  Pass `{ snapToCursor: true }` as the second argument to `controls.start(e, { snapToCursor: true })` to snap the element's center to the pointer position at drag start.
+</Tip>
+
+## Drag callbacks
+
+```svelte
+<motion.div
+    drag
+    onDragStart={(event, info) => console.log('Start', info.point)}
+    onDrag={(event, info) => console.log('Move', info.delta)}
+    onDragEnd={(event, info) => console.log('End', info.velocity)}
+    onDragTransitionEnd={() => console.log('Momentum settled')}
+/>
+```
+
+### DragInfo object
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `point` | `{ x, y }` | Current pointer position |
+| `delta` | `{ x, y }` | Change since last drag event |
+| `offset` | `{ x, y }` | Total offset since drag start |
+| `velocity` | `{ x, y }` | Current velocity in px/s |
+
+## Props reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `drag` | `boolean \| 'x' \| 'y'` | `false` | Enable drag. `true` for both axes |
+| `dragConstraints` | `{ top?, left?, right?, bottom? } \| HTMLElement` | — | Pixel bounds or container element |
+| `dragElastic` | `number` | `0.35` | Overdrag elasticity. `0` = hard stop |
+| `dragMomentum` | `boolean` | `true` | Apply post-release momentum |
+| `dragTransition` | `DragTransition` | — | Physics configuration |
+| `dragSnapToOrigin` | `boolean` | `false` | Spring back to start on release |
+| `dragDirectionLock` | `boolean` | `false` | Lock to first axis of movement |
+| `dragPropagation` | `boolean` | `true` | Allow drag to bubble to parent drag elements |
+| `dragListener` | `boolean` | `true` | Enable built-in drag listener on the element |
+| `dragControls` | `DragControls` | — | External controls for programmatic drag |
+| `whileDrag` | `MotionStyle` | — | Animation target while dragging |
+
+## Related
+
+- [Gestures: Drag](/gestures/drag) — full drag reference
+- [Hover & Tap examples](/examples/hover-tap) — other gesture examples

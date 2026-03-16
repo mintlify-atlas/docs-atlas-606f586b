@@ -1,0 +1,200 @@
+---
+title: "useMotionValue and useMotionValueEvent"
+description: "Create reactive values that animate without triggering Svelte re-renders, and subscribe to their changes."
+---
+
+## What are motion values?
+
+A **MotionValue** is a reactive value that can drive animations without triggering Svelte's normal reactivity system. Unlike `$state`, updating a MotionValue does not cause a component to re-render — instead, changes flow directly to CSS properties via the `style` attribute. This makes them ideal for high-frequency updates such as scroll-linked progress, spring-backed dragging, or frame-rate animations.
+
+Under the hood, a `MotionValue<T>` is a Svelte readable store with two extra methods:
+
+```typescript
+type MotionValue<T = number> = Readable<T> & {
+    set: (v: T) => void
+    get: () => T
+}
+```
+
+## useMotionValue
+
+Creates a new `MotionValue` with an initial value.
+
+```typescript
+import { useMotionValue } from '@humanspeak/svelte-motion'
+
+function useMotionValue<T = number>(initial: T): MotionValue<T>
+```
+
+<ParamField path="initial" type="T" required>
+  The starting value. Defaults to `number` but accepts any type via the generic parameter.
+</ParamField>
+
+### Reading and writing values
+
+Use `.get()` to read the current value synchronously and `.set(value)` to update it:
+
+```svelte
+<script lang="ts">
+  import { useMotionValue } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+
+  // Read the current value synchronously
+  console.log(x.get()) // 0
+
+  // Write a new value
+  x.set(100)
+  console.log(x.get()) // 100
+</script>
+```
+
+### Using with the style prop
+
+Pass MotionValues into `styleString` to create a reactive inline style string. `styleString` handles unit inference — dimensional properties like `x`, `y`, `width`, and `height` receive `px` automatically; rotation receives `deg`.
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, styleString } from '@humanspeak/svelte-motion'
+
+  const x = useMotionValue(0)
+  const opacity = useMotionValue(1)
+
+  function handleMouseMove(e: MouseEvent) {
+    x.set(e.clientX - window.innerWidth / 2)
+  }
+</script>
+
+<svelte:window onmousemove={handleMouseMove} />
+
+<div
+  style={styleString({ x: $x, opacity: $opacity })}
+  class="box"
+>
+  Follow the cursor
+</div>
+```
+
+<Note>
+  Subscribe to a `MotionValue` in a Svelte template using the `$` store shorthand — `$x` — just like any other Svelte readable store.
+</Note>
+
+### Driving animations on pointer events
+
+```svelte
+<script lang="ts">
+  import { useMotionValue, useSpring, styleString } from '@humanspeak/svelte-motion'
+
+  const rawX = useMotionValue(0)
+  const rawY = useMotionValue(0)
+  const x = useSpring(rawX, { stiffness: 300, damping: 30 })
+  const y = useSpring(rawY, { stiffness: 300, damping: 30 })
+
+  function track(e: MouseEvent) {
+    rawX.set(e.clientX)
+    rawY.set(e.clientY)
+  }
+</script>
+
+<svelte:window onmousemove={track} />
+
+<div
+  style={styleString({ x: $x, y: $y })}
+  class="cursor-dot"
+/>
+```
+
+---
+
+## useMotionValueEvent
+
+Subscribes to a MotionValue (or any Svelte readable store) and fires a callback on every **change**, skipping the initial synchronous emission that Svelte stores produce on subscribe.
+
+```typescript
+import { useMotionValueEvent } from '@humanspeak/svelte-motion'
+
+function useMotionValueEvent<T>(
+    store: Readable<T>,
+    event: 'change',
+    callback: (latest: T) => void
+): () => void
+```
+
+<ParamField path="store" type="Readable<T>" required>
+  Any Svelte readable store or MotionValue to observe.
+</ParamField>
+
+<ParamField path="event" type="'change'" required>
+  The event type to listen for. Currently only `'change'` is supported.
+</ParamField>
+
+<ParamField path="callback" type="(latest: T) => void" required>
+  Called with the latest value on each change after the initial emission.
+</ParamField>
+
+Returns an unsubscribe function. Call it in `onDestroy` or return it from a `$effect` for automatic cleanup.
+
+### Example: logging value changes
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useMotionValueEvent
+  } from '@humanspeak/svelte-motion'
+  import { onDestroy } from 'svelte'
+
+  const x = useMotionValue(0)
+
+  const unsub = useMotionValueEvent(x, 'change', (latest) => {
+    console.log('x changed to', latest)
+  })
+
+  onDestroy(unsub)
+</script>
+
+<input
+  type="range"
+  min="-200"
+  max="200"
+  oninput={(e) => x.set(Number(e.currentTarget.value))}
+/>
+```
+
+### Example: using with $effect
+
+In Svelte 5, you can return the unsubscribe function directly from `$effect`:
+
+```svelte
+<script lang="ts">
+  import {
+    useMotionValue,
+    useMotionValueEvent
+  } from '@humanspeak/svelte-motion'
+
+  const scrollY = useMotionValue(0)
+  let direction = $state<'up' | 'down' | null>(null)
+  let lastY = 0
+
+  $effect(() => {
+    return useMotionValueEvent(scrollY, 'change', (y) => {
+      direction = y > lastY ? 'down' : 'up'
+      lastY = y
+    })
+  })
+</script>
+```
+
+---
+
+## MotionValue type
+
+```typescript
+import type { MotionValue } from '@humanspeak/svelte-motion'
+
+// Generic — defaults to number
+const count: MotionValue<number> = useMotionValue(0)
+const label: MotionValue<string> = useMotionValue('hello')
+```
+
+Because `MotionValue<T>` extends `Readable<T>`, it is compatible everywhere a Svelte store is accepted — including `derived`, `useTransform`, `useSpring`, and `useVelocity`.

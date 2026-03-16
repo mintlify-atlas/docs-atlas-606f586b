@@ -1,0 +1,369 @@
+---
+title: "TypeScript Types"
+description: "All exported TypeScript types from @humanspeak/svelte-motion."
+---
+
+Svelte Motion exports all of its types so you can use them directly in your TypeScript code without importing from internal paths.
+
+## Import
+
+```typescript
+import type {
+  Variants,
+  MotionInitial,
+  MotionAnimate,
+  MotionTransition,
+  MotionWhileTap,
+  MotionWhileHover,
+  MotionWhileFocus,
+  MotionWhileDrag,
+  MotionWhileInView,
+  DragAxis,
+  DragConstraints,
+  DragTransition,
+  DragControls,
+  DragInfo,
+  MotionProps,
+  AnimatePresenceMode,
+  MotionValue
+} from '@humanspeak/svelte-motion'
+```
+
+---
+
+## Animation state types
+
+### Variants
+
+```typescript
+type Variants = Record<string, DOMKeyframesDefinition | undefined>
+```
+
+A map of named animation states. Keys are variant names (strings); values are keyframe definition objects or `undefined`.
+
+```typescript
+import type { Variants } from '@humanspeak/svelte-motion'
+
+const cardVariants: Variants = {
+  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 20 }
+}
+```
+
+---
+
+### MotionInitial
+
+```typescript
+type MotionInitial = DOMKeyframesDefinition | string | false | undefined
+```
+
+The value of the `initial` prop.
+
+- `DOMKeyframesDefinition` — inline keyframe object.
+- `string` — variant key.
+- `false` — skip the enter animation entirely.
+- `undefined` — no initial state (element renders at `animate` state).
+
+---
+
+### MotionAnimate
+
+```typescript
+type MotionAnimate = DOMKeyframesDefinition | string | undefined
+```
+
+The value of the `animate` prop. Accepts an inline keyframe object or a variant key string.
+
+---
+
+### MotionTransition
+
+```typescript
+type MotionTransition = AnimationOptions | undefined
+```
+
+The value of the `transition` prop. `AnimationOptions` is imported from the `motion` package and covers all tween, spring, and inertia options. See [Transition Options](/api/transition-options).
+
+---
+
+### MotionWhileTap
+
+```typescript
+type MotionWhileTap = DOMKeyframesDefinition | undefined
+```
+
+Keyframe definition applied while the element is being tapped/pressed.
+
+---
+
+### MotionWhileHover
+
+```typescript
+type MotionWhileHover =
+  | (Record<string, unknown> & { transition?: AnimationOptions })
+  | DOMKeyframesDefinition
+  | undefined
+```
+
+Keyframe definition applied while the pointer is hovering. Supports an inline `transition` key to override the hover animation's transition.
+
+---
+
+### MotionWhileFocus
+
+```typescript
+type MotionWhileFocus =
+  | (Record<string, unknown> & { transition?: AnimationOptions })
+  | DOMKeyframesDefinition
+  | undefined
+```
+
+Keyframe definition applied while the element has keyboard focus.
+
+---
+
+### MotionWhileDrag
+
+```typescript
+type MotionWhileDrag =
+  | (Record<string, unknown> & { transition?: AnimationOptions })
+  | DOMKeyframesDefinition
+  | undefined
+```
+
+Keyframe definition applied while the element is being dragged.
+
+---
+
+### MotionWhileInView
+
+```typescript
+type MotionWhileInView =
+  | (Record<string, unknown> & { transition?: AnimationOptions })
+  | DOMKeyframesDefinition
+  | undefined
+```
+
+Keyframe definition applied while the element is visible in the viewport.
+
+---
+
+## Drag types
+
+### DragAxis
+
+```typescript
+type DragAxis = boolean | 'x' | 'y'
+```
+
+Controls which axes dragging is enabled on:
+- `true` — both axes.
+- `'x'` — horizontal only.
+- `'y'` — vertical only.
+
+---
+
+### DragConstraints
+
+```typescript
+type DragConstraints =
+  | {
+      top?: number
+      left?: number
+      right?: number
+      bottom?: number
+    }
+  | HTMLElement
+```
+
+Constrains the draggable area.
+
+- **Pixel bounds**: optional `top`, `left`, `right`, `bottom` values in pixels relative to the element's rest position.
+- **HTMLElement**: the element is constrained within the target's bounding box.
+
+```typescript
+// Pixel bounds
+const constraints: DragConstraints = { left: -100, right: 100 }
+
+// Element bounds
+const constraints: DragConstraints = containerElement
+```
+
+---
+
+### DragTransition
+
+```typescript
+type DragTransition = {
+  bounceStiffness?: number
+  bounceDamping?: number
+  power?: number
+  timeConstant?: number
+  restDelta?: number
+  restSpeed?: number
+  min?: number
+  max?: number
+}
+```
+
+Physics configuration for the post-drag momentum or bounce-back animation.
+
+| Property | Description |
+|----------|-------------|
+| `bounceStiffness` | Spring stiffness for constraint bounce-back. |
+| `bounceDamping` | Damping for constraint bounce-back. |
+| `power` | Scales momentum from release velocity. |
+| `timeConstant` | Inertia decay time in milliseconds. |
+| `restDelta` | Position delta below which to stop. |
+| `restSpeed` | Speed below which to stop. |
+| `min` | Minimum boundary for inertia. |
+| `max` | Maximum boundary for inertia. |
+
+---
+
+### DragControls
+
+```typescript
+type DragControls = {
+  start: (
+    event: PointerEvent,
+    options?: { snapToCursor?: boolean; distanceThreshold?: number }
+  ) => void
+  cancel: () => void
+  stop: () => void
+  subscribe: (el: HTMLElement) => void
+}
+```
+
+Imperative handle returned by `createDragControls()`.
+
+| Method | Description |
+|--------|-------------|
+| `start(event, options?)` | Imperatively start a drag from any pointer event. `snapToCursor` snaps the element's center to the pointer. |
+| `cancel()` | Cancel an active drag without applying momentum. |
+| `stop()` | Stop the current drag and any momentum animation. |
+| `subscribe(el)` | Subscribe the controls to a target element. |
+
+---
+
+### DragInfo
+
+```typescript
+type DragInfo = {
+  point: { x: number; y: number }
+  delta: { x: number; y: number }
+  offset: { x: number; y: number }
+  velocity: { x: number; y: number }
+}
+```
+
+The second argument passed to drag callbacks (`onDragStart`, `onDrag`, `onDragEnd`).
+
+| Field | Description |
+|-------|-------------|
+| `point` | Pointer position in page coordinates. |
+| `delta` | Change from the previous drag event. |
+| `offset` | Total displacement from drag start. |
+| `velocity` | Current velocity in pixels/second. |
+
+---
+
+## Component types
+
+### MotionProps
+
+```typescript
+type MotionProps = {
+  key?: string
+  variants?: Variants
+  initial?: MotionInitial
+  animate?: MotionAnimate
+  exit?: MotionExit
+  transition?: MotionTransition
+  whileTap?: MotionWhileTap
+  whileHover?: MotionWhileHover
+  whileFocus?: MotionWhileFocus
+  whileDrag?: MotionWhileDrag
+  whileInView?: MotionWhileInView
+  onAnimationStart?: (definition: DOMKeyframesDefinition | undefined) => void
+  onAnimationComplete?: (definition: DOMKeyframesDefinition | undefined) => void
+  onHoverStart?: () => void
+  onHoverEnd?: () => void
+  onFocusStart?: () => void
+  onFocusEnd?: () => void
+  onInViewStart?: () => void
+  onInViewEnd?: () => void
+  onTapStart?: () => void
+  onTap?: () => void
+  onTapCancel?: () => void
+  onDragStart?: (event: PointerEvent, info: DragInfo) => void
+  onDrag?: (event: PointerEvent, info: DragInfo) => void
+  onDragEnd?: (event: PointerEvent, info: DragInfo) => void
+  onDirectionLock?: (axis: 'x' | 'y') => void
+  onDragTransitionEnd?: () => void
+  style?: string
+  class?: string
+  layout?: boolean | 'position'
+  layoutId?: string
+  ref?: HTMLElement | null
+  drag?: DragAxis
+  dragConstraints?: DragConstraints
+  dragElastic?: number
+  dragMomentum?: boolean
+  dragTransition?: DragTransition
+  dragDirectionLock?: boolean
+  dragPropagation?: boolean
+  dragSnapToOrigin?: boolean
+  dragListener?: boolean
+  dragControls?: DragControls
+}
+```
+
+The complete set of animation and gesture props accepted by all `motion.*` components. See [MotionProps](/api/motion-props) for full per-prop documentation.
+
+---
+
+### AnimatePresenceMode
+
+```typescript
+type AnimatePresenceMode = 'sync' | 'wait' | 'popLayout'
+```
+
+Controls enter/exit animation coordination in `AnimatePresence`.
+
+| Value | Behaviour |
+|-------|-----------|
+| `'sync'` | Enter and exit animations run simultaneously (default). |
+| `'wait'` | Exit animations complete before enter animations start. |
+| `'popLayout'` | Exiting elements are removed from layout flow immediately; entering elements snap into position. |
+
+---
+
+## Utility types
+
+### MotionValue\<T\>
+
+```typescript
+type MotionValue<T = number> = Readable<T> & {
+  set: (v: T) => void
+  get: () => T
+}
+```
+
+A reactive value store returned by `useMotionValue`. Extends Svelte's `Readable<T>` with synchronous `get` and `set` methods.
+
+| Member | Description |
+|--------|-------------|
+| `subscribe` | Svelte store subscribe method. Reactive with the `$` prefix in templates. |
+| `get()` | Synchronously read the current value without subscribing. |
+| `set(v)` | Update the value and notify subscribers. |
+
+```typescript
+import { useMotionValue, type MotionValue } from '@humanspeak/svelte-motion'
+
+const x: MotionValue<number> = useMotionValue(0)
+
+x.set(100)
+console.log(x.get()) // 100
+```

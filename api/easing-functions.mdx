@@ -1,0 +1,181 @@
+---
+title: "Easing Functions"
+description: "Importable easing functions re-exported from the motion library."
+---
+
+Svelte Motion re-exports all standard easing functions from `motion`. You can pass these directly to the `ease` option in any `transition` prop.
+
+## Import
+
+```typescript
+import {
+  easeIn,
+  easeOut,
+  easeInOut,
+  circIn,
+  circOut,
+  circInOut,
+  backIn,
+  backOut,
+  backInOut,
+  anticipate,
+  cubicBezier
+} from '@humanspeak/svelte-motion'
+```
+
+<Note>
+  These are re-exported directly from the `motion` package. Refer to the [motion documentation](https://motion.dev) for the authoritative specification.
+</Note>
+
+## Usage
+
+Pass an easing function value to `transition.ease`:
+
+```svelte
+<script>
+  import { motion, easeInOut } from '@humanspeak/svelte-motion'
+</script>
+
+<motion.div
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ ease: easeInOut, duration: 0.4 }}
+/>
+```
+
+---
+
+## Standard easings
+
+<ParamField path="easeIn" type="EasingFunction">
+  Starts slow and accelerates towards the end. Good for elements that are leaving the screen.
+
+  ```svelte
+  <motion.div transition={{ ease: easeIn, duration: 0.3 }} />
+  ```
+</ParamField>
+
+<ParamField path="easeOut" type="EasingFunction">
+  Starts fast and decelerates towards the end. Good for elements entering the screen.
+
+  ```svelte
+  <motion.div transition={{ ease: easeOut, duration: 0.3 }} />
+  ```
+</ParamField>
+
+<ParamField path="easeInOut" type="EasingFunction">
+  Starts slow, speeds up through the middle, and decelerates at the end. Natural-feeling for most UI transitions.
+
+  ```svelte
+  <motion.div transition={{ ease: easeInOut, duration: 0.4 }} />
+  ```
+</ParamField>
+
+---
+
+## Circular easings
+
+<ParamField path="circIn" type="EasingFunction">
+  Circular acceleration from rest. More aggressive than `easeIn` at the start.
+</ParamField>
+
+<ParamField path="circOut" type="EasingFunction">
+  Circular deceleration to rest. More aggressive than `easeOut` at the end.
+</ParamField>
+
+<ParamField path="circInOut" type="EasingFunction">
+  Circular acceleration then deceleration. Sharper curve than `easeInOut`.
+</ParamField>
+
+---
+
+## Back easings
+
+<ParamField path="backIn" type="EasingFunction">
+  Anticipation easing — pulls slightly backward before moving forward. Creates a wind-up effect.
+</ParamField>
+
+<ParamField path="backOut" type="EasingFunction">
+  Overshoot easing — goes slightly past the target before settling. Creates a bounce-past effect.
+
+  ```svelte
+  <!-- Button pops slightly beyond scale: 1.1 before settling -->
+  <motion.button
+    whileHover={{ scale: 1.1 }}
+    transition={{ ease: backOut, duration: 0.3 }}
+  />
+  ```
+</ParamField>
+
+<ParamField path="backInOut" type="EasingFunction">
+  Combines anticipation and overshoot. Strong dramatic curve.
+</ParamField>
+
+---
+
+## Anticipate
+
+<ParamField path="anticipate" type="EasingFunction">
+  Pulls back before accelerating forward, then settles with a small overshoot. Combines `backIn` and `easeOut` into a single curve. Good for playful, expressive UI elements.
+
+  ```svelte
+  <motion.div
+    animate={{ x: 100 }}
+    transition={{ ease: anticipate, duration: 0.5 }}
+  />
+  ```
+</ParamField>
+
+---
+
+## Custom cubic bezier
+
+<ParamField path="cubicBezier" type="(x1: number, y1: number, x2: number, y2: number) => EasingFunction">
+  Creates a custom cubic bezier easing curve. The four parameters correspond to the two control points of the bezier curve, matching the CSS `cubic-bezier()` syntax.
+
+  All values should be between `0` and `1` for `x1`/`x2`, while `y1`/`y2` can exceed this range to create overshoot effects.
+
+  ```svelte
+  <script>
+    import { motion, cubicBezier } from '@humanspeak/svelte-motion'
+    const myEase = cubicBezier(0.17, 0.67, 0.83, 0.67)
+  </script>
+
+  <motion.div
+    animate={{ opacity: 1 }}
+    transition={{ ease: myEase, duration: 0.5 }}
+  />
+  ```
+</ParamField>
+
+---
+
+## Comparison table
+
+| Function | Feel | Best for |
+|----------|------|-----------|
+| `easeIn` | Slow start, fast end | Exit animations |
+| `easeOut` | Fast start, slow end | Enter animations |
+| `easeInOut` | Slow → fast → slow | General UI transitions |
+| `circIn` | Sharp slow start | Emphasised exits |
+| `circOut` | Sharp fast start | Emphasised enters |
+| `circInOut` | Sharp S-curve | Dramatic transitions |
+| `backIn` | Anticipation wind-up | Expressive exits |
+| `backOut` | Overshoot settle | Playful enters |
+| `backInOut` | Wind-up + overshoot | Strong dramatic transitions |
+| `anticipate` | Pull-back + launch | Playful, energetic motion |
+| `cubicBezier` | Custom curve | Branded, tailored motion |
+
+---
+
+## Using string names
+
+As an alternative to imported function values, you can also pass easing names as strings directly in `transition`:
+
+```svelte
+<motion.div
+  animate={{ opacity: 1 }}
+  transition={{ ease: 'easeOut', duration: 0.3 }}
+/>
+```
+
+Supported string names: `'linear'`, `'easeIn'`, `'easeOut'`, `'easeInOut'`, `'circIn'`, `'circOut'`, `'circInOut'`, `'backIn'`, `'backOut'`, `'backInOut'`, `'anticipate'`.

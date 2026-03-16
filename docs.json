@@ -1,122 +1,128 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Svelte Motion",
+  "theme": "willow",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0099ff",
+    "light": "#e0f2fe",
+    "dark": "#0057b8"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/humanspeak/svelte-motion"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/humanspeak/svelte-motion"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/motion-components",
+              "concepts/animate",
+              "concepts/transitions",
+              "concepts/variants",
+              "concepts/ssr"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Animations",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "animations/enter-exit",
+              "animations/animate-presence",
+              "animations/layout",
+              "animations/scroll"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Gestures",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "gestures/hover",
+              "gestures/tap",
+              "gestures/focus",
+              "gestures/drag",
+              "gestures/in-view"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "utilities/use-spring",
+              "utilities/use-transform",
+              "utilities/use-motion-value",
+              "utilities/use-animation-frame",
+              "utilities/use-time",
+              "utilities/use-velocity",
+              "utilities/use-motion-template",
+              "utilities/use-scroll",
+              "utilities/style-string"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/overview",
+              "examples/hover-tap",
+              "examples/variants",
+              "examples/animate-presence",
+              "examples/drag",
+              "examples/layout-animations",
+              "examples/scroll-animations"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Components",
             "pages": [
-              "api-reference/introduction"
+              "api/motion",
+              "api/animate-presence",
+              "api/motion-config"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Props",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/motion-props",
+              "api/transition-options",
+              "api/drag-props"
+            ]
+          },
+          {
+            "group": "Hooks & Utilities",
+            "pages": [
+              "api/hooks",
+              "api/easing-functions",
+              "api/utility-functions"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

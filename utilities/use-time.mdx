@@ -1,0 +1,138 @@
+---
+title: "useTime"
+description: "Returns a MotionValue of elapsed milliseconds that ticks on every animation frame."
+---
+
+## Overview
+
+`useTime` returns a Svelte readable store whose value is the number of milliseconds elapsed since the store was created. It updates once per animation frame via `requestAnimationFrame`, making it suitable for driving continuously animated values.
+
+It is SSR-safe — on the server it returns a static store with the value `0`.
+
+```typescript
+import { useTime } from '@humanspeak/svelte-motion'
+import type { Readable } from 'svelte/store'
+
+function useTime(id?: string): Readable<number>
+```
+
+<ParamField path="id" type="string">
+  An optional timeline identifier. When multiple components call `useTime` with the same `id`, they receive the same store instance and are guaranteed to read identical values on each frame — useful for synchronised animations across components.
+  
+  Without an `id`, each call creates an independent timeline.
+</ParamField>
+
+---
+
+## Basic usage
+
+Subscribe to the time store in a template with the `$` prefix:
+
+```svelte
+<script lang="ts">
+  import { useTime } from '@humanspeak/svelte-motion'
+
+  const time = useTime()
+</script>
+
+<p>Elapsed: {Math.round($time)}ms</p>
+```
+
+---
+
+## Combining with useTransform
+
+The real power of `useTime` comes from combining it with `useTransform` to map elapsed time to animated CSS properties:
+
+### Looping rotation
+
+```svelte
+<script lang="ts">
+  import { useTime, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const time = useTime()
+
+  // One full rotation every 3 seconds
+  const rotate = useTransform(time, [0, 3000], [0, 360], { clamp: false })
+</script>
+
+<div style={styleString({ rotate: $rotate })} class="spinner" />
+```
+
+<Tip>
+  Set `clamp: false` on `useTransform` when mapping time to a looping value. Without it, the output is clamped to `[0, 360]` once the input exceeds `3000`ms.
+</Tip>
+
+### Oscillating scale
+
+```svelte
+<script lang="ts">
+  import { useTime, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const time = useTime()
+
+  // Use the function form for sin-wave oscillation
+  const scale = useTransform(
+    () => 1 + 0.1 * Math.sin($time / 500),
+    [time]
+  )
+</script>
+
+<div style={styleString({ scale: $scale })} class="pulse" />
+```
+
+### Scroll progress timer
+
+```svelte
+<script lang="ts">
+  import { useTime, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const time = useTime()
+
+  // Cycle a hue from 0 to 360 every 5 seconds, looping indefinitely
+  const hue = useTransform(time, [0, 5000], [0, 360], { clamp: false })
+
+  // Derive a CSS colour string from the hue
+  const color = useTransform(
+    () => `hsl(${$hue % 360}, 80%, 60%)`,
+    [hue]
+  )
+</script>
+
+<div style="background: {$color}" class="gradient-box" />
+```
+
+---
+
+## Shared timelines
+
+Components that need synchronised animations should share a timeline by passing the same `id`:
+
+```svelte
+<!-- ComponentA.svelte -->
+<script lang="ts">
+  import { useTime, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const time = useTime('shared-clock')
+  const rotate = useTransform(time, [0, 2000], [0, 360], { clamp: false })
+</script>
+
+<div style={styleString({ rotate: $rotate })} class="gear-a" />
+```
+
+```svelte
+<!-- ComponentB.svelte -->
+<script lang="ts">
+  import { useTime, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  // Same id — same store, same tick values
+  const time = useTime('shared-clock')
+  const rotate = useTransform(time, [0, 2000], [0, -360], { clamp: false })
+</script>
+
+<div style={styleString({ rotate: $rotate })} class="gear-b" />
+```
+
+<Note>
+  Shared stores are keyed by `id` in a module-level `Map`. The store is removed from the map when all subscribers unsubscribe. HMR reloads clear the map to prevent stale entries.
+</Note>

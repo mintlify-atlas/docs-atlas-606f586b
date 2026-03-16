@@ -1,0 +1,189 @@
+---
+title: "useScroll"
+description: "Track scroll position and progress for window scroll or individual scrollable elements."
+---
+
+## Overview
+
+`useScroll` returns four reactive Svelte stores linked to scroll position and normalised progress on both axes. Use them with `useTransform`, `useSpring`, or directly in templates to create scroll-driven animations.
+
+It is SSR-safe — on the server all four stores are static `readable(0)` instances.
+
+```typescript
+import { useScroll } from '@humanspeak/svelte-motion'
+
+function useScroll(options?: UseScrollOptions): {
+    scrollX: Readable<number>       // Pixels scrolled on the X axis
+    scrollY: Readable<number>       // Pixels scrolled on the Y axis
+    scrollXProgress: Readable<number> // 0–1 progress on the X axis
+    scrollYProgress: Readable<number> // 0–1 progress on the Y axis
+}
+```
+
+## UseScrollOptions
+
+<ParamField path="container" type="HTMLElement | (() => HTMLElement | undefined)">
+  Scrollable container element to track. Defaults to the page (`window`). Accepts an element directly or a getter function — useful with Svelte's `bind:this` where the element is not available until after mount.
+</ParamField>
+
+<ParamField path="target" type="HTMLElement | (() => HTMLElement | undefined)">
+  A target element whose position within the container is tracked. When provided, `scrollXProgress` and `scrollYProgress` represent the target's scroll progress relative to the viewport rather than the entire page scroll.
+</ParamField>
+
+<ParamField path="offset" type="Array<[number | string, number | string]> | string[]">
+  Scroll offset configuration used when `target` is set. Defines when the progress goes from `0` to `1`. Accepts string keywords (`"start"`, `"center"`, `"end"`) or numbers (0–1). Passed directly to Motion's `scroll()` function.
+</ParamField>
+
+<ParamField path="axis" type="'x' | 'y'">
+  The axis used for the single-axis `progress` value when calling Motion's underlying `scroll()` function.
+</ParamField>
+
+---
+
+## Tracking window scroll
+
+The default (no options) tracks the page scroll:
+
+```svelte
+<script lang="ts">
+  import { useScroll, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+</script>
+
+<!-- Scroll progress bar fixed at the top of the page -->
+<div
+  style={styleString({ scaleX: $scrollYProgress, transformOrigin: 'left' })}
+  class="progress-bar"
+/>
+```
+
+---
+
+## Tracking a scrollable container
+
+Pass a `container` to track a specific scrollable element instead of the window. Use a getter function when working with `bind:this`:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  let container: HTMLDivElement | undefined
+
+  // Pass a getter — useScroll defers resolution until the element is mounted
+  const { scrollYProgress } = useScroll({
+    container: () => container
+  })
+
+  const opacity = useTransform(scrollYProgress, [0, 1], [0, 1])
+</script>
+
+<div bind:this={container} class="scroll-area">
+  <div style={styleString({ opacity: $opacity })} class="fade-in-on-scroll">
+    Fades in as you scroll the container
+  </div>
+</div>
+```
+
+<Note>
+  When you pass a getter function for `container` or `target`, `useScroll` polls on each animation frame until the element is mounted. The stores will read `0` until the element is available.
+</Note>
+
+---
+
+## Tracking an element's position in the viewport
+
+Set `target` to track a specific element's scroll progress relative to the viewport. This is how you build enter/exit effects tied to an individual element:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  let section: HTMLElement | undefined
+
+  const { scrollYProgress } = useScroll({
+    target: () => section,
+    offset: [['start end'], ['end start']]
+  })
+
+  // Fade in as the element enters, fade out as it exits
+  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 1, 1, 0])
+  // Parallax vertical shift
+  const y = useTransform(scrollYProgress, [0, 1], [60, -60])
+</script>
+
+<section bind:this={section} style={styleString({ opacity: $opacity, y: $y })}>
+  Scroll me into view
+</section>
+```
+
+---
+
+## Spring-smoothed scroll progress
+
+Pair `useScroll` with `useSpring` for a smooth progress bar that eases behind the real scroll position:
+
+```svelte
+<script lang="ts">
+  import { useScroll, useSpring, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    mass: 0.5
+  })
+</script>
+
+<div
+  style={styleString({ scaleX: $scaleX, transformOrigin: 'left' })}
+  class="progress-bar"
+/>
+```
+
+---
+
+## Parallax scrolling
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  const { scrollY } = useScroll()
+
+  // Background layer moves up more slowly
+  const bgY = useTransform(scrollY, [0, 1000], [0, -200])
+  // Text layer moves up faster
+  const textY = useTransform(scrollY, [0, 1000], [0, -500])
+</script>
+
+<div class="hero">
+  <div style={styleString({ y: $bgY })} class="hero__bg" />
+  <h1 style={styleString({ y: $textY })} class="hero__title">Hello world</h1>
+</div>
+```
+
+---
+
+## Horizontal scroll
+
+```svelte
+<script lang="ts">
+  import { useScroll, useTransform, styleString } from '@humanspeak/svelte-motion'
+
+  let slider: HTMLElement | undefined
+
+  const { scrollXProgress } = useScroll({
+    container: () => slider,
+    axis: 'x'
+  })
+
+  const opacity = useTransform(scrollXProgress, [0, 1], [0.5, 1])
+</script>
+
+<div bind:this={slider} class="horizontal-scroll">
+  {#each items as item}
+    <div style={styleString({ opacity: $opacity })} class="slide">{item}</div>
+  {/each}
+</div>
+```
