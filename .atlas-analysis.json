@@ -1,0 +1,152 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Svelte Motion",
+  "projectDescription": "A Framer Motion-compatible animation library for Svelte 5 that provides motion components, variants, gestures, exit animations, layout animations, and utility hooks.",
+  "theme": "willow",
+  "primaryColor": "#0099ff",
+  "lightColor": "#e0f2fe",
+  "darkColor": "#0057b8",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/motion-components",
+              "concepts/animate",
+              "concepts/transitions",
+              "concepts/variants",
+              "concepts/ssr"
+            ]
+          },
+          {
+            "group": "Animations",
+            "pages": [
+              "animations/enter-exit",
+              "animations/animate-presence",
+              "animations/layout",
+              "animations/scroll"
+            ]
+          },
+          {
+            "group": "Gestures",
+            "pages": [
+              "gestures/hover",
+              "gestures/tap",
+              "gestures/focus",
+              "gestures/drag",
+              "gestures/in-view"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "utilities/use-spring",
+              "utilities/use-transform",
+              "utilities/use-motion-value",
+              "utilities/use-animation-frame",
+              "utilities/use-time",
+              "utilities/use-velocity",
+              "utilities/use-motion-template",
+              "utilities/use-scroll",
+              "utilities/style-string"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/overview",
+              "examples/hover-tap",
+              "examples/variants",
+              "examples/animate-presence",
+              "examples/drag",
+              "examples/layout-animations",
+              "examples/scroll-animations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Components",
+            "pages": [
+              "api/motion",
+              "api/animate-presence",
+              "api/motion-config"
+            ]
+          },
+          {
+            "group": "Props",
+            "pages": [
+              "api/motion-props",
+              "api/transition-options",
+              "api/drag-props"
+            ]
+          },
+          {
+            "group": "Hooks & Utilities",
+            "pages": [
+              "api/hooks",
+              "api/easing-functions",
+              "api/utility-functions"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Framer Motion-compatible API for Svelte 5",
+    "motion.<tag> components for all standard HTML/SVG elements",
+    "AnimatePresence for enter/exit animations with sync, wait, and popLayout modes",
+    "Variants system with string keys and context inheritance",
+    "Gesture support: whileHover, whileTap, whileFocus, whileInView, drag",
+    "FLIP layout animations with layout and layoutId props",
+    "Spring physics via useSpring and transition type: 'spring'",
+    "Utility hooks: useMotionValue, useTransform, useSpring, useTime, useScroll",
+    "SSR-safe: initial state rendered server-side, hydration without flicker",
+    "TypeScript-first with full type exports"
+  ],
+  "publicApiSurface": [
+    "motion (motion.div, motion.button, motion.svg, etc.)",
+    "AnimatePresence",
+    "MotionConfig",
+    "useSpring",
+    "useTransform",
+    "useMotionValue",
+    "useMotionValueEvent",
+    "useAnimationFrame",
+    "useTime",
+    "useVelocity",
+    "useMotionTemplate",
+    "useScroll",
+    "styleString",
+    "createDragControls",
+    "animate",
+    "stagger",
+    "transform",
+    "easeIn / easeOut / easeInOut / cubicBezier / spring easings",
+    "Variants (type)",
+    "MotionProps (type)",
+    "DragControls (type)",
+    "AnimatePresenceMode (type)"
+  ]
+}
